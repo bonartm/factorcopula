@@ -1,8 +1,11 @@
-getStandResiduals <- function(x){
-  if (!requireNamespace("rugarch", quietly = TRUE)) {
-    stop("rugarch needed for this function to work. Please install it.", call. = FALSE)
+checkNamespace <- function(name){
+  if (!requireNamespace(name, quietly = TRUE)) {
+    stop(paste(name, "needed for this function to work. Please install it.", call. = FALSE))
   }
+}
 
+getStandResiduals <- function(x){
+  checkNamespace("rugarch")
   spec = rugarch::ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)),
                              mean.model=list(armaOrder=c(1,0), include.mean=TRUE),
                              distribution.model="norm")

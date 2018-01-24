@@ -9,8 +9,27 @@ _____
 ## installation
 ```R
 install.packages("devtools")
-devtools::install_github("bonartm/factorcopula", ref = "dev")
+devtools::install_github("bonartm/factorcopula")
 ````
 
 ## usage
+```R
+library(factorcopula)
+N <- 2
+Z <- list(rst = list(nuInv = "nuInv", lambda = "lambda"))
+eps <- list(rtInv = (list(dfInv = "nuInv")))
+beta <- matrix("beta1", nrow = N)
+copFun <- factorCopula(beta, N, Z, eps)
+theta <- c(beta1 = 2, nuInv = 0.25, lambda = -0.8)
+lower <- c(0, 0.01, -0.99)
+upper <- c(10, 0.49, 0.99)
+names(lower) <- names(theta)
+names(upper) <- names(theta)
+U <- copFun(theta, 1000)
+Y <- qnorm(U)
 
+m <- fitFactorCopula(Y, copFun, S = 10000, lower = lower, upper = upper, method = "subplex", 
+                      control = list(stopval = 0, xtol_rel = 0, maxeval = 2000, ftol_abs = 1e-5, runs = 4))
+plot(Y, pch = 20)
+points(qnorm(copFun(m$par, 2000)), col = "red", pch = 20)
+````

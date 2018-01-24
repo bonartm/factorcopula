@@ -6,9 +6,11 @@ Q <- function(x, y, W){
 fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, seed = runif(1, 1, .Machine$integer.max), method = c("DEoptim", "genoud", "subplex"), control) {
   method <- match.arg(method)
 
-  T <- nrow(Y)
-  N <- ncol(Y)
-  mHat <- moments(Y, k)
+  Yres <- apply(Y, 2, empDist)
+
+  T <- nrow(Yres)
+  N <- ncol(Yres)
+  mHat <- moments(Yres, k)
   W <- diag(length(mHat))
   optim <- function(theta){
     names(theta) <- names(lower)
@@ -19,13 +21,15 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
   }
 
   if (method == "DEoptim"){
-    res <- DEoptim(optim, lower = lower, upper = upper, control = control)
+    checkNamespace("DEoptim")
+    res <- DEoptim::DEoptim(optim, lower = lower, upper = upper, control = control)
   }
   if (method == "genoud"){
+    checkNamespace("rgenoud")
     control <- c(control, list(fn = optim, nvars = length(lower), Domains = matrix(c(lower, upper), ncol = 2),
                                boundary.enforcement = 2, P9 = 0, BFGS = FALSE, hessian = FALSE,
                                optim.method = "Nelder-Mead"))
-    res <- do.call(genoud, control)
+    res <- do.call(rgenoud::genoud, control)
   }
   if (method == "subplex"){
     if(is.null(control$runs)){
@@ -37,16 +41,19 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
     if (is.null(control$cl)){
       res <- lapply(1:runs, function(i) {
         theta0 <- sapply(seq_along(lower), function(j) runif(1, lower[j], upper[j]))
-        sbplx(theta0, optim, lower = lower, upper = upper, control = control)
+        nloptr::sbplx(theta0, optim, lower = lower, upper = upper, control = control)
       })
     } else {
       cl <- control$cl
       control$cl <- NULL
       res <- parLapply(cl, 1:runs, function(i) {
         theta0 <- sapply(seq_along(lower), function(j) runif(1, lower[j], upper[j]))
-        sbplx(theta0, optim, lower = lower, upper = upper, control = control)
+        nloptr::sbplx(theta0, optim, lower = lower, upper = upper, control = control)
       })
     }
+    min <- which.min(vapply(res, function(x) x$value, numeric(1)))
+    res <- res[[min]]
+    names(res$par) <- names(lower)
   }
   return(res)
 }
