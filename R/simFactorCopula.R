@@ -35,13 +35,22 @@ genBetaMat <- function(beta, theta){
   return(matrix(as.numeric(beta), ncol = ncol(beta)))
 }
 
+
+
+
+#' Simulate values from a factor copula model
+#'
+#' @param beta a character matrix of size [NxK] indicating the names and position of the beta parameters (see example)
+#' @param N the number of variables
+#' @param Z a named list of size K and names equal to a random number generator function which takes an argument n and possibly other arguments passed as numeric values or characters (if parameter)
+#' @param eps a named list of size 1 (see Z)
+#' @param zFixed if TRUE zMatrix is only simulated once and stays fixed
+#' @param epsFixed see zFixed
+#' @param S the number of observations, only needed if zFixed or epsFixed is TRUE
+#'
+#' @return a function which can be used to simulate values from a factor copula model
+#' @export
 factorCopula <- function(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S = NULL){
-  # Returns a function which can be used to simulate values from a factor copula model
-  # beta: a character matrix of size [NxK] indicating the names and position of the beta parameters (see example)
-  # Z: a named list of size K and names equal to a random number generator function which takes an argument n and possibly other arguments passed as numeric values or characters (if parameter)
-  # eps: a named list of size 1 (see Z)
-  # zFixed: if TRUE zMatrix is only simulated once and stays fixed
-  # epsFixed: see zFixed
   # value: a function with arguments:
   # theta: a named vector of parameters which is matched to the parameters in Z, eps and beta
   # S: the number of simulations

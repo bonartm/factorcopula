@@ -3,6 +3,20 @@ Q <- function(x, y, W){
   t(diff)%*%W%*%diff
 }
 
+#' Fit a factor copula model
+#'
+#' @param Y A dataframe or matrix like object
+#' @param copFun A copula function estimated by @references factorCopula
+#' @param k A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)
+#' @param S The number of simulations to use
+#' @param lower Lower bound for optimazation: Named vector with parameters
+#' @param upper Upper bound for optimazation: Named vector with parameters
+#' @param seed Fixed random number seed to use during optimazation
+#' @param method "DEoptim", "genoud" or "subplex" (see Details)
+#' @param control named list of arguments passed to the optimizer
+#'
+#' @return a list of optimazation results
+#' @export
 fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, seed = runif(1, 1, .Machine$integer.max), method = c("DEoptim", "genoud", "subplex"), control) {
   method <- match.arg(method)
 
