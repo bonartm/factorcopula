@@ -4,6 +4,14 @@ checkNamespace <- function(name){
   }
 }
 
+#' Title
+#'
+#' @param x
+#'
+#' @return
+#' @export
+#'
+#' @examples
 getStandResiduals <- function(x){
   checkNamespace("rugarch")
   spec = rugarch::ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)),
@@ -69,6 +77,15 @@ quantDep <- function(u, v, qSeq){
   }, numeric(1))
 }
 
+
+#' Title
+#'
+#' @param k
+#'
+#' @return
+#' @export
+#'
+#' @examples
 genBetaParMat <- function(k){
   kTab <- table(k)
   M <- max(k)
