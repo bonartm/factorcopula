@@ -8,7 +8,6 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports: 
-  Rcpp (>= 0.12.14),
   nloptr,
   snow,
   parallel,
@@ -21,7 +20,6 @@ Suggests:
   readr,
   rugarch
 Depends:
-  R (>= 3.3.3),
-  dplyr
+  R (>= 3.3.3)
 LinkingTo: 
-  Rcpp
+RoxygenNote: 6.0.1
