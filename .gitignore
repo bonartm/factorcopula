@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .Rproj.user
 .Rhistory
 .RData
@@ -6,6 +7,8 @@ src/*.o
 src/*.so
 src/*.dll
 
+=======
+>>>>>>> 9ddf2c32c158b87c5012dffd795c06a6c0d5f6ce
 # History files
 .Rhistory
 .Rapp.history
