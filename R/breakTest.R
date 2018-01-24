@@ -5,8 +5,6 @@
 #'
 #' @return
 #' @export
-#'
-#' @examples
 getPStat <- function(theta, tSeq){
   stopifnot(!is.null(dim(theta)))
 

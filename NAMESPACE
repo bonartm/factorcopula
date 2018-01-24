@@ -2,3 +2,7 @@
 
 export(factorCopula)
 export(fitFactorCopula)
+export(genBetaParMat)
+export(getPStat)
+export(getStandResiduals)
+export(loadPackagesOnCluster)
