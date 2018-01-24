@@ -1,13 +1,27 @@
 Package: factorcopula
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: High Dimensional Depence Modelling with Factor Copulas
+Version: 0.1
+Author@R: person("Malte", "Bonart", email = "bonartm@uni-koeln.de", role = c("aut", "cre"))
+Description: r package for high dimensional specification, simulation and estimation of factor copula models
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports: Rcpp (>= 0.12.14)
-LinkingTo: Rcpp
+Imports: 
+  Rcpp (>= 0.12.14),
+  nloptr,
+  snow,
+  parallel,
+  data.table,
+  dplyr
+Suggests:
+  sgt,
+  DEoptim,
+  rgenoud,
+  readr,
+  rugarch
+Depends:
+  R (>= 3.3.3),
+  dplyr
+LinkingTo: 
+  Rcpp

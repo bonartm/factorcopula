@@ -1,17 +1,19 @@
-loadPackages <- function(cl, packages){
-  clusterExport(cl, "packages", envir = environment())
-  res <- clusterEvalQ(cl, invisible(lapply(packages, library, character.only = TRUE, logical.return = TRUE)))
+loadPackagesOnCluster <- function(cl, packages){
+  snow::clusterExport(cl, "packages", envir = environment())
+  res <- snow::clusterEvalQ(cl, invisible(lapply(packages, library, character.only = TRUE, logical.return = TRUE)))
   all(unlist(res))
 }
 
-
-
 getStandResiduals <- function(x){
-  spec = ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)),
+  if (!requireNamespace("rugarch", quietly = TRUE)) {
+    stop("rugarch needed for this function to work. Please install it.", call. = FALSE)
+  }
+
+  spec = rugarch::ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)),
                     mean.model=list(armaOrder=c(1,0), include.mean=TRUE),
                     distribution.model="norm")
-  garch <- ugarchfit(spec = spec, data = x)
-  res <- as.vector(residuals(garch, standardize = TRUE))
+  garch <- rugarch::ugarchfit(spec = spec, data = x)
+  res <- as.vector(rugarch::residuals(garch, standardize = TRUE))
   return(res)
 }
 
