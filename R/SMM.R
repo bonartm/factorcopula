@@ -4,9 +4,11 @@ loadPackages <- function(cl, packages){
   all(unlist(res))
 }
 
+
+
 getStandResiduals <- function(x){
-  spec = ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)), 
-                    mean.model=list(armaOrder=c(1,0), include.mean=TRUE),  
+  spec = ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)),
+                    mean.model=list(armaOrder=c(1,0), include.mean=TRUE),
                     distribution.model="norm")
   garch <- ugarchfit(spec = spec, data = x)
   res <- as.vector(residuals(garch, standardize = TRUE))
@@ -39,14 +41,14 @@ rst <- function(n, nuInv = 1e-10, lambda = 0){
     c <- gamma((nu+1)/2)/(sqrt(pi*(nu-2))*gamma(nu/2))
     a <- 4*lambda*c*((nu-2)/(nu-1));
   }
-  
+
   b <- sqrt(1 + 3*lambda^2 - a^2);
-  
+
   f1 <- u < (1-lambda)/2
 
   inv1 <- (1-lambda)/b*sqrt((nu-2)/nu)*qt(u[f1]/(1-lambda), nu)-a/b
   inv2 <- (1+lambda)/b*sqrt((nu-2)/nu)*qt(0.5+1/(1+lambda)*(u[!f1]-(1-lambda)/2), nu)-a/b
-  
+
   inv <- rep(0, n)
   inv[f1]  <- inv1
   inv[!f1]  <- inv2
@@ -86,7 +88,7 @@ dependence <- function(u, v, q = c(0.05, 0.10, 0.90, 0.95)){
 # microbenchmark(cMomentsIntra(U), times = 10, unit = "s")
 
 momentsIntra <- function(U){
-  N <- ncol(U) 
+  N <- ncol(U)
   m <- rep(0, 5)
   for (i in 1:(N-1)){
     for (j in (i+1):N){
@@ -99,7 +101,7 @@ momentsIntra <- function(U){
 }
 
 momentsInter <- function(Xdist, k){
-  N <- ncol(Xdist) 
+  N <- ncol(Xdist)
   m <- rep(0, 5)
   for (i in 1:(N-1)){
     for (j in (i+1):N){
@@ -118,7 +120,7 @@ moments <- function(U, k = rep(1, ncol(U))){
   #k: same length as ncol(U), defines groups for which measures are averaged
   M <- max(k)
   N <- ncol(U)
-  
+
   if (M == N){# unrestricted model
     dep <- matrix(NA, ncol = 5, nrow = 0.5*N*(N-1))
     ind <- 1
@@ -190,7 +192,7 @@ genBetaMat <- function(beta, theta){
 factorCopula <- function(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S = NULL){
   # Returns a function which can be used to simulate values from a factor copula model
   # beta: a character matrix of size [NxK] indicating the names and position of the beta parameters (see example)
-  # Z: a named list of size K and names equal to a random number generator function which takes an argument n and possibly other arguments passed as numeric values or characters (if parameter) 
+  # Z: a named list of size K and names equal to a random number generator function which takes an argument n and possibly other arguments passed as numeric values or characters (if parameter)
   # eps: a named list of size 1 (see Z)
   # zFixed: if TRUE zMatrix is only simulated once and stays fixed
   # epsFixed: see zFixed
@@ -206,7 +208,7 @@ factorCopula <- function(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S =
   if (epsFixed) {
     epsMat <- simEpsMat(eps, NULL, S, N, NULL)
   }
-  
+
   function(theta, S = NULL, seed = NULL){
     if (!zFixed)
       zMat <- simZMat(Z, theta, S, seed)
@@ -221,12 +223,12 @@ factorCopula <- function(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S =
 Q <- function(x, y, W){
   diff <- x - y
   t(diff)%*%W%*%diff
-} 
+}
 
 
 fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, seed = runif(1, 1, .Machine$integer.max), method = c("DEoptim", "genoud", "subplex"), control) {
   method <- match.arg(method)
-  
+
   T <- nrow(Y)
   N <- ncol(Y)
   mHat <- moments(Y, k)
@@ -238,12 +240,12 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
     res <- as.vector(Q(mTilde, mHat, W))
     res
   }
-  
+
   if (method == "DEoptim"){
     res <- DEoptim(optim, lower = lower, upper = upper, control = control)
   }
   if (method == "genoud"){
-    control <- c(control, list(fn = optim, nvars = length(lower), Domains = matrix(c(lower, upper), ncol = 2), 
+    control <- c(control, list(fn = optim, nvars = length(lower), Domains = matrix(c(lower, upper), ncol = 2),
                                boundary.enforcement = 2, P9 = 0, BFGS = FALSE, hessian = FALSE,
                                optim.method = "Nelder-Mead"))
     res <- do.call(genoud, control)
@@ -274,7 +276,7 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
 
 getPStat <- function(theta, tSeq){
   stopifnot(!is.null(dim(theta)))
-  
+
   T <- max(tSeq)
   diff <- apply(theta, 1, function(x) sum(x - theta[nrow(theta), ])^2)
   P <- tSeq^2/T*diff
@@ -299,10 +301,10 @@ critVal <- function(Y, k = rep(1, ncol(Y)), B, copFun, theta, eps, cl){
   T <- nrow(Y)
   tSeq <- seq(floor(eps*T), T, 1)
   W <- diag(length(mHead))
-  
+
   derivG <- G(theta, copFun, 0.1, S = 25000, mHead, k)
   AstarLeft <- solve(t(derivG) %*%W %*% derivG) %*% t(derivG) %*% W
-  
+
   K <- parLapply(1:B, function(b){
     sampleInd <- sample(1:T, T, replace = TRUE)
     Astar <- lapply(tSeq, function(t){
@@ -336,7 +338,7 @@ genBetaParMat <- function(k){
   first <- rep(paste0("beta", 1:M), times = kTab)
   last <- lapply(1:M, function(m){
     if (m == 1) timesLow <- 0 else timesLow <- sum(kTab[1:m-1])
-    if (m == M) timesUp <- 0 else timesUp <- sum(kTab[(m+1):M]) 
+    if (m == M) timesUp <- 0 else timesUp <- sum(kTab[(m+1):M])
     c(rep(0, timesLow), rep(paste0("beta", m+M), kTab[m]), rep(0, timesUp))
   })
   cbind(first, do.call(cbind, last))
