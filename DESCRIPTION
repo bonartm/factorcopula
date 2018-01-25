@@ -7,7 +7,7 @@ Description: r package for high dimensional specification, simulation and estima
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports: 
+Imports:
   nloptr,
   snow,
   parallel,
@@ -18,7 +18,8 @@ Suggests:
   DEoptim,
   rgenoud,
   readr,
-  rugarch
+  rugarch,
+    testthat
 Depends:
   R (>= 3.3.3)
 LinkingTo: 
