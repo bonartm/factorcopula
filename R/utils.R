@@ -1,4 +1,3 @@
-#' Load packages on a cluster
 #'
 #' @param cl cluster object created by @references snow::makeCluster
 #' @param packages list or vector of package names

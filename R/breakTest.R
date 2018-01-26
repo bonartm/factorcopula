@@ -7,12 +7,10 @@
 #' @export
 getPStat <- function(theta, tSeq){
   stopifnot(!is.null(dim(theta)))
-
   T <- max(tSeq)
   diff <- apply(theta, 1, function(x) sum(x - theta[nrow(theta), ])^2)
   P <- tSeq^2/T*diff
-  estBrkPnt <- tSeq[which.max(P)]
-  return(list(P = P, breakPoint = estBrkPnt))
+  return(P)
 }
 
 unitVector <- function(size, k){
@@ -52,7 +50,7 @@ critVal <- function(Y, k = rep(1, ncol(Y)), B, copFun, theta, eps, cl){
   unlist(K)
 }
 
-G <- function(theta, copFun, eps, mHead, k, S){
+G <- function(theta, copFun, eps, mHead, k, S, seed){
   Gcol <- lapply(seq_along(theta), function(i){
     upper <- theta + unitVector(length(theta), i)*eps
     lower <- theta - unitVector(length(theta), i)*eps
@@ -62,3 +60,19 @@ G <- function(theta, copFun, eps, mHead, k, S){
   })
   return(do.call(cbind, Gcol))
 }
+
+Astar <- function(G, W){
+  solve(t(G)%*%W%*%G)%*%t(G)%*%W
+}
+
+A <- function(t, resDis, mHat, b, k){
+  T <- nrow(resDis)
+  mHatB <- moments(resDis[b, ][1:t, ], k)
+  t/T*sqrt(T)*(mHatB - mHat)
+}
+
+
+
+
+
+

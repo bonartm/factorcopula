@@ -48,7 +48,7 @@ genBetaMat <- function(beta, theta){
 #' @param epsFixed see zFixed
 #' @param S the number of observations, only needed if zFixed or epsFixed is TRUE
 #'
-#' @return a function which can be used to simulate values from a factor copula model
+#' @return a function which can be used to simulate values from a factor copula model. It has the parameters theta, S and seed
 #' @export
 factorCopula <- function(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S = NULL){
   # value: a function with arguments:

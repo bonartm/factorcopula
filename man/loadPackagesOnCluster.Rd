@@ -25,6 +25,4 @@ TRUE if all packages could be loaded on all cluster nodes
 }
 \description{
 Load packages on a cluster
-
-Load packages on a cluster
 }

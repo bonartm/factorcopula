@@ -65,9 +65,11 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
         nloptr::sbplx(theta0, optim, lower = lower, upper = upper, control = control)
       })
     }
-    min <- which.min(vapply(res, function(x) x$value, numeric(1)))
-    res <- res[[min]]
-    names(res$par) <- names(lower)
+    theta <- do.call(rbind, lapply(res, function(x) x$par))
+    colnames(theta) <- names(lower)
+    Qval <- unlist(lapply(res, function(x) x$value))
+    converged <- unlist(lapply(res, function(x) x$convergence != 5))
+    res <- cbind(theta, Q = Qval, convergence = converged)
   }
   return(res)
 }
