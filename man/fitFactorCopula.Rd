@@ -6,7 +6,7 @@
 \usage{
 fitFactorCopula(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper,
   seed = runif(1, 1, .Machine$integer.max), method = c("DEoptim", "genoud",
-  "subplex"), control)
+  "subplex", "two-stage"), control, cl = NULL, trials = NULL)
 }
 \arguments{
 \item{Y}{A dataframe or matrix like object}

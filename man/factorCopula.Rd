@@ -22,7 +22,7 @@ factorCopula(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S = NULL)
 \item{S}{the number of observations, only needed if zFixed or epsFixed is TRUE}
 }
 \value{
-a function which can be used to simulate values from a factor copula model:
+a function which can be used to simulate values from a factor copula model. It has the parameters theta, S and seed
 }
 \description{
 Simulate values from a factor copula model

@@ -17,7 +17,9 @@ Q <- function(x, y, W){
 #'
 #' @return a list of optimazation results
 #' @export
-fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, seed = runif(1, 1, .Machine$integer.max), method = c("DEoptim", "genoud", "subplex"), control) {
+fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, seed = runif(1, 1, .Machine$integer.max),
+                            method = c("DEoptim", "genoud", "subplex", "two-stage"), control, cl = NULL, trials = NULL) {
+
   method <- match.arg(method)
 
   Yres <- apply(Y, 2, empDist)
@@ -26,7 +28,7 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
   N <- ncol(Yres)
   mHat <- moments(Yres, k)
   W <- diag(length(mHat))
-  optim <- function(theta){
+  optim <- function(theta, S){
     names(theta) <- names(lower)
     U <- copFun(theta, S, seed)
     mTilde <- moments(U, k)
@@ -34,46 +36,74 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
     res
   }
 
+  if (method == "two-stage"){
+    if (is.null(trials)){
+      stop("Please specify the number of trials for the subplex method.")
+    }
+    # first approximate the global optimum
+    checkNamespace("DEoptim")
+    controlDE = list(c = 0.4, itermax = 100, reltol = 1e-6, steptol = 20, cl = cl, trace = FALSE)
+    res <- DEoptim::DEoptim(optim, lower = lower, upper = upper, control = controlDE, S = 0.2*S)
+    theta0 <- res$optim$bestmem
+    # the use local optimizer
+    res <- fitFactorCopulaSubplex(trials, lower, upper, optim, theta0 = theta0, cl = cl, control = control, S = S)
+  }
+
   if (method == "DEoptim"){
     checkNamespace("DEoptim")
-    res <- DEoptim::DEoptim(optim, lower = lower, upper = upper, control = control)
+    control$cl <- cl
+    res <- DEoptim::DEoptim(optim, lower = lower, upper = upper, control = control, S = S)
   }
   if (method == "genoud"){
     checkNamespace("rgenoud")
+    if (is.null(cl)){
+      cluster <- FALSE
+    } else {
+      cluster <- cl
+    }
     control <- c(control, list(fn = optim, nvars = length(lower), Domains = matrix(c(lower, upper), ncol = 2),
-                               boundary.enforcement = 2, P9 = 0, BFGS = FALSE, hessian = FALSE,
-                               optim.method = "Nelder-Mead"))
+                               boundary.enforcement = 2, P9 = 0, BFGS = FALSE, hessian = FALSE, cluster = cluster,
+                               optim.method = "Nelder-Mead", S = S))
     res <- do.call(rgenoud::genoud, control)
   }
+
   if (method == "subplex"){
-    if(is.null(control$runs)){
-      runs <- 16
-    } else {
-      runs <- control$runs
+    if (is.null(trials)){
+      stop("Please specify the number of trials for the subplex method.")
     }
-    control$runs <- NULL
-    if (is.null(control$cl)){
-      res <- lapply(1:runs, function(i) {
-        theta0 <- sapply(seq_along(lower), function(j) runif(1, lower[j], upper[j]))
-        nloptr::sbplx(theta0, optim, lower = lower, upper = upper, control = control)
-      })
-    } else {
-      cl <- control$cl
-      control$cl <- NULL
-      res <- parLapply(cl, 1:runs, function(i) {
-        theta0 <- sapply(seq_along(lower), function(j) runif(1, lower[j], upper[j]))
-        nloptr::sbplx(theta0, optim, lower = lower, upper = upper, control = control)
-      })
-    }
-    theta <- do.call(rbind, lapply(res, function(x) x$par))
-    colnames(theta) <- names(lower)
-    Qval <- unlist(lapply(res, function(x) x$value))
-    converged <- unlist(lapply(res, function(x) x$convergence != 5))
-    res <- cbind(theta, Q = Qval, convergence = converged)
+    res <- fitFactorCopulaSubplex(trials, lower, upper, optim, cl = cl, control = control, S = S)
   }
   return(res)
 }
 
+fitFactorCopulaSubplex <- function(trials, lower, upper, optim, S, theta0 = NULL, control, cl){
+  res <- parallelLapply(1:trials, function(i){
+    if (is.null(theta0)){
+      theta0 <- runif(length(lower), lower, upper)
+    } else {
+      theta0 <- runif(length(theta0), theta0 - abs(theta0*0.1), theta0 + abs(theta0*0.1))
+      theta0[theta0 < lower] <- lower[theta0 < lower]
+      theta0[theta0 > upper] <- upper[theta0 > upper]
+    }
+    nloptr::sbplx(theta0, optim, lower = lower, upper = upper, control = control, S = S)
+  }, cl = cl)
+
+  theta <- do.call(rbind, lapply(res, function(x) x$par))
+  colnames(theta) <- names(lower)
+  Qval <- unlist(lapply(res, function(x) x$value))
+  converged <- unlist(lapply(res, function(x) x$convergence != 5))
+  res <- cbind(theta, Q = Qval, convergence = converged)
+  return(res)
+}
+
+
+parallelLapply <- function(x, fun, cl, ...){
+  if(is.null(cl)){
+    lapply(x, fun, ...)
+  } else {
+    parLapply(cl, x, fun, ...)
+  }
+}
 
 
 
