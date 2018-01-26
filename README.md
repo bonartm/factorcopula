@@ -3,7 +3,7 @@
 ## features
 - [x] simulation from user specified (e.g. e.g. factors and error terms from the skew t, normal, t distribution) [factor copula models](http://www.tandfonline.com/doi/full/10.1080/07350015.2015.1062384)
 - [x] (parallel) estimation of high dimensional dependence structures using the [simulated methods of moments](https://pdfs.semanticscholar.org/cc9f/124d25111430f4f2e977869daef6f403e24a.pdf)
-- [] implementation of a [strucutral break test](http://www.wisostat.uni-koeln.de/sites/statistik/abstracts/Manner_Stark_Wied_2017.pdf)
+- [ ] implementation of a [strucutral break test](http://www.wisostat.uni-koeln.de/sites/statistik/abstracts/Manner_Stark_Wied_2017.pdf)
 
 
 ## installation from github master branch
