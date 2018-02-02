@@ -8,70 +8,52 @@
 getPStat <- function(theta, tSeq){
   stopifnot(!is.null(dim(theta)))
   T <- max(tSeq)
-  diff <- apply(theta, 1, function(x) sum(x - theta[nrow(theta), ])^2)
-  P <- tSeq^2/T*diff
+  diff <- apply(theta, 1, function(x) {
+    diff <- (x - theta[nrow(theta), ])
+    t(diff)%*%diff
+  })
+  P <- (tSeq/T)^2*T*diff
   return(P)
 }
 
-unitVector <- function(size, k){
-  vec <- rep(0, size)
-  vec[k] <- 1
-  return(vec)
-}
+
 
 # Structural Break Test ---------------------------------------------------
 
-critVal <- function(Y, k = rep(1, ncol(Y)), B, copFun, theta, eps, cl){
+critVal <- function(Y, B, copFun, theta, tSeq, cl = NULL, k = rep(1, ncol(Y))){
   #resY: matrix of standardized residuals from empirical data Y
   #B: number of bootstrap samples
   #moments: function which generates a vector of dependence measures
-  #eps: lower bound for the fraction of observations s to use
-  mHead <- moments(Y, k)
+  Ydis <- apply(Y, 2, empDist)
+  mHat <- moments(Ydis, k)
   T <- nrow(Y)
-  tSeq <- seq(floor(eps*T), T, 1)
-  W <- diag(length(mHead))
+  seed <- runif(1, min = 1, max = .Machine$integer.max)
 
-  derivG <- G(theta, copFun, 0.1, S = 25000, mHead, k)
-  AstarLeft <- solve(t(derivG) %*%W %*% derivG) %*% t(derivG) %*% W
+  G <- getGHat(theta, copFun, 0.1, mHat, k, S = 25000, seed)
+  W <- diag(length(mHat))
 
-  K <- parLapply(1:B, function(b){
-    sampleInd <- sample(1:T, T, replace = TRUE)
-    Astar <- lapply(tSeq, function(t){
-      mHeadB <- moments(Y[sampleInd[1:t], ], k)
-      A <- (mHeadB - mHead)*sqrt(T)*t/T
-      AstarLeft %*% A
+
+  leftPart <- solve(t(G)%*%W%*%G)%*%t(G)%*%W
+
+  Kb <- replicate(B, {
+    b <- sample(1:T, T, replace = TRUE)
+
+    Astar <- lapply(tSeq, function(t) {
+      mHatBt <- moments(Ydis[b, ][1:t, ], k)
+      A <- t/T*sqrt(T)*(mHatBt - mHat)
+      leftPart %*% A
     })
-    Kb <- lapply(seq_along(Astar), function(i) {
-      diff <- Astar[[i]] - tSeq[i]/T*Astar[[length(Astar)]]
-      t(diff) %*% diff
-    })
-    max(unlist(Kb))
-  }, cl = cl)
-  unlist(K)
-}
 
-G <- function(theta, copFun, eps, mHead, k, S, seed){
-  Gcol <- lapply(seq_along(theta), function(i){
-    upper <- theta + unitVector(length(theta), i)*eps
-    lower <- theta - unitVector(length(theta), i)*eps
-    gUpper <- mHead - moments(copFun(upper, S), k)
-    gLower <- mHead - moments(copFun(lower, S), k)
-    (gUpper - gLower)/2*eps
+    Kbt <- vapply(seq_along(tSeq), function(i){
+      t <- tSeq[i]
+      diff <- Astar[[i]] - t/T*Astar[[length(tSeq)]]
+      t(diff)%*%diff
+    }, numeric(1))
+
+    return(max(Kbt))
   })
-  return(do.call(cbind, Gcol))
+  return(Kb)
 }
-
-Astar <- function(G, W){
-  solve(t(G)%*%W%*%G)%*%t(G)%*%W
-}
-
-A <- function(t, resDis, mHat, b, k){
-  T <- nrow(resDis)
-  mHatB <- moments(resDis[b, ][1:t, ], k)
-  t/T*sqrt(T)*(mHatB - mHat)
-}
-
-
 
 
 

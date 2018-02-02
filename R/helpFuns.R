@@ -75,6 +75,11 @@ quantDep <- function(u, v, qSeq){
   }, numeric(1))
 }
 
+unitVector <- function(size, k){
+  vec <- rep(0, size)
+  vec[k] <- 1
+  return(vec)
+}
 
 #' Title
 #'

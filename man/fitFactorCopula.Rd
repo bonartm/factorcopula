@@ -4,28 +4,28 @@
 \alias{fitFactorCopula}
 \title{Fit a factor copula model}
 \usage{
-fitFactorCopula(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper,
-  seed = runif(1, 1, .Machine$integer.max), method = c("DEoptim", "genoud",
-  "subplex", "two-stage"), control, cl = NULL, trials = NULL)
+fitFactorCopula(Y, copFun, lower, upper, method = c("DEoptim", "genoud",
+  "subplex", "two-stage"), control, cluster = NULL, trials = NULL,
+  S = NULL, k = rep(1, ncol(Y)), seed = runif(1, 1, .Machine$integer.max))
 }
 \arguments{
 \item{Y}{A dataframe or matrix like object}
 
 \item{copFun}{A copula function estimated by @references factorCopula}
 
-\item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
-
-\item{S}{The number of simulations to use}
-
 \item{lower}{Lower bound for optimazation: Named vector with parameters}
 
 \item{upper}{Upper bound for optimazation: Named vector with parameters}
 
-\item{seed}{Fixed random number seed to use during optimazation}
-
 \item{method}{"DEoptim", "genoud" or "subplex" (see Details)}
 
 \item{control}{named list of arguments passed to the optimizer}
+
+\item{S}{The number of simulations to use}
+
+\item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
+
+\item{seed}{Fixed random number seed to use during optimazation}
 }
 \value{
 a list of optimazation results

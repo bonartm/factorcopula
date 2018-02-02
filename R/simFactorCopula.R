@@ -55,6 +55,8 @@ factorCopula <- function(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S =
   # theta: a named vector of parameters which is matched to the parameters in Z, eps and beta
   # S: the number of simulations
   # seed: possibly a seed to keep the rng fixed during different simulations
+  force(beta)
+
   if (zFixed|epsFixed)
     stopifnot(!is.null(S))
   if (zFixed) {
@@ -64,13 +66,31 @@ factorCopula <- function(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S =
     epsMat <- simEpsMat(eps, NULL, S, N, NULL)
   }
 
-  function(theta, S = NULL, seed = NULL){
-    if (!zFixed)
+  if (zFixed|epsFixed){
+    function(theta, seed = NULL){
+      if (!zFixed)
+        zMat <- simZMat(Z, theta, S, seed)
+      if (!epsFixed)
+        epsMat <- simEpsMat(eps, theta, S, N, seed)
+      beta <- genBetaMat(beta, theta)
+      X <- zMat%*%t(beta) + epsMat
+      apply(X, 2, empDist)
+    }
+
+  } else {
+    function(theta, S, seed = NULL){
       zMat <- simZMat(Z, theta, S, seed)
-    if (!epsFixed)
       epsMat <- simEpsMat(eps, theta, S, N, seed)
-    beta <- genBetaMat(beta, theta)
-    X <- zMat%*%t(beta) + epsMat
-    apply(X, 2, empDist)
+      beta <- genBetaMat(beta, theta)
+      X <- zMat%*%t(beta) + epsMat
+      apply(X, 2, empDist)
+    }
   }
+
+
 }
+
+
+
+
+

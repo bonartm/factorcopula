@@ -1,7 +1,39 @@
-Q <- function(x, y, W){
-  diff <- x - y
-  t(diff)%*%W%*%diff
+getQVal <- function(gVal, W){
+  t(gVal)%*%W%*%gVal
 }
+
+getGVal <- function(mHat, copFun, theta, S, seed, k){
+  U <- copFun(theta, S, seed)
+  mTilde <- moments(U, k)
+  return(mHat - mTilde)
+}
+
+getGHat <- function(theta, copFun, eps, mHat, k, S, seed){
+  Gcol <- lapply(seq_along(theta), function(i){
+    upperTheta <- theta + unitVector(length(theta), i)*eps
+    lowerTheta <- theta - unitVector(length(theta), i)*eps
+    gUpper <- getGVal(mHat, copFun, upperTheta, S, seed, k)
+    gLower <- getGVal(mHat, copFun, lowerTheta, S, seed, k)
+    (gUpper - gLower)/2*eps
+  })
+  return(do.call(cbind, Gcol))
+}
+
+getSigmaHat <- function(Y, B, k){
+  T <- nrow(Y)
+  Ydis <- apply(Y, 2, empDist)
+  sigmaB <- replicate(B, {
+    b <- sample(1:T, T, replace = TRUE)
+    mHatB <- moments(Ydis[b, ], k)
+  })
+  T*cov(t(sigmaB))
+}
+
+getOmegaHat <- function(G, W, sigma){
+  inv <- solve(t(G)%*%W%*%G)
+  inv%*%t(G)%*%W%*%sigma%*%W%*%G%*%inv
+}
+
 
 #' Fit a factor copula model
 #'
@@ -17,8 +49,8 @@ Q <- function(x, y, W){
 #'
 #' @return a list of optimazation results
 #' @export
-fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, seed = runif(1, 1, .Machine$integer.max),
-                            method = c("DEoptim", "genoud", "subplex", "two-stage"), control, cl = NULL, trials = NULL) {
+fitFactorCopula <- function(Y, copFun, lower, upper, method = c("DEoptim", "genoud", "subplex", "two-stage"), control,
+                            cluster = NULL, trials = NULL, S = NULL, k = rep(1, ncol(Y)), seed = runif(1, 1, .Machine$integer.max)) {
 
   method <- match.arg(method)
 
@@ -28,12 +60,12 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
   N <- ncol(Yres)
   mHat <- moments(Yres, k)
   W <- diag(length(mHat))
-  optim <- function(theta, S){
+
+
+  opti <- function(theta){
     names(theta) <- names(lower)
-    U <- copFun(theta, S, seed)
-    mTilde <- moments(U, k)
-    res <- as.vector(Q(mTilde, mHat, W))
-    res
+    gVal <-getGVal(mHat, copFun, theta, S, seed, k)
+    as.vector(getQVal(gVal, W))
   }
 
   if (method == "two-stage"){
@@ -42,28 +74,26 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
     }
     # first approximate the global optimum
     checkNamespace("DEoptim")
-    controlDE = list(c = 0.4, itermax = 100, reltol = 1e-6, steptol = 20, cl = cl, trace = FALSE)
-    res <- DEoptim::DEoptim(optim, lower = lower, upper = upper, control = controlDE, S = 0.2*S)
+    controlDE = list(c = 0.4, itermax = 100, reltol = 1e-6, steptol = 20, cl = cluster, trace = FALSE)
+    res <- DEoptim::DEoptim(opti, lower = lower, upper = upper, control = controlDE)
     theta0 <- res$optim$bestmem
     # the use local optimizer
-    res <- fitFactorCopulaSubplex(trials, lower, upper, optim, theta0 = theta0, cl = cl, control = control, S = S)
+    res <- fitFactorCopulaSubplex(trials, lower, upper, opti, theta0 = theta0, cl = cluster, control = control)
   }
 
   if (method == "DEoptim"){
     checkNamespace("DEoptim")
-    control$cl <- cl
-    res <- DEoptim::DEoptim(optim, lower = lower, upper = upper, control = control, S = S)
+    control$cl <- cluster
+    res <- DEoptim::DEoptim(opti, lower = lower, upper = upper, control = control)
   }
   if (method == "genoud"){
     checkNamespace("rgenoud")
-    if (is.null(cl)){
+    if (is.null(cluster))
       cluster <- FALSE
-    } else {
-      cluster <- cl
-    }
-    control <- c(control, list(fn = optim, nvars = length(lower), Domains = matrix(c(lower, upper), ncol = 2),
+
+    control <- c(control, list(fn = opti, nvars = length(lower), Domains = matrix(c(lower, upper), ncol = 2),
                                boundary.enforcement = 2, P9 = 0, BFGS = FALSE, hessian = FALSE, cluster = cluster,
-                               optim.method = "Nelder-Mead", S = S))
+                               optim.method = "Nelder-Mead"))
     res <- do.call(rgenoud::genoud, control)
   }
 
@@ -71,12 +101,14 @@ fitFactorCopula <- function(Y, copFun, k = rep(1, ncol(Y)), S, lower, upper, see
     if (is.null(trials)){
       stop("Please specify the number of trials for the subplex method.")
     }
-    res <- fitFactorCopulaSubplex(trials, lower, upper, optim, cl = cl, control = control, S = S)
+
+    res <- fitFactorCopulaSubplex(trials = trials, lower = lower, upper = upper, fn = opti, cluster = cluster, control = control, theta0 = NULL)
+
   }
   return(res)
 }
 
-fitFactorCopulaSubplex <- function(trials, lower, upper, optim, S, theta0 = NULL, control, cl){
+fitFactorCopulaSubplex <- function(trials, lower, upper, fn, control, cluster, theta0 = NULL){
   res <- parallelLapply(1:trials, function(i){
     if (is.null(theta0)){
       theta0 <- runif(length(lower), lower, upper)
@@ -85,8 +117,8 @@ fitFactorCopulaSubplex <- function(trials, lower, upper, optim, S, theta0 = NULL
       theta0[theta0 < lower] <- lower[theta0 < lower]
       theta0[theta0 > upper] <- upper[theta0 > upper]
     }
-    nloptr::sbplx(theta0, optim, lower = lower, upper = upper, control = control, S = S)
-  }, cl = cl)
+    nloptr::sbplx(x0 = theta0, fn = fn, lower = lower, upper = upper, control = control)
+  }, cl = cluster)
 
   theta <- do.call(rbind, lapply(res, function(x) x$par))
   colnames(theta) <- names(lower)
@@ -97,13 +129,7 @@ fitFactorCopulaSubplex <- function(trials, lower, upper, optim, S, theta0 = NULL
 }
 
 
-parallelLapply <- function(x, fun, cl, ...){
-  if(is.null(cl)){
-    lapply(x, fun, ...)
-  } else {
-    parLapply(cl, x, fun, ...)
-  }
-}
+
 
 
 
