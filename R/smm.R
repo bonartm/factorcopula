@@ -49,7 +49,7 @@ getOmegaHat <- function(G, W, sigma){
 #'
 #' @return a list of optimazation results
 #' @export
-fitFactorCopula <- function(Y, copFun, lower, upper, method = c("DEoptim", "genoud", "subplex", "two-stage"), control,
+fc_fit <- function(Y, copFun, lower, upper, method = c("DEoptim", "genoud", "subplex", "two-stage"), control,
                             cluster = NULL, trials = NULL, S = NULL, k = rep(1, ncol(Y)), seed = runif(1, 1, .Machine$integer.max)) {
 
   method <- match.arg(method)
@@ -107,6 +107,8 @@ fitFactorCopula <- function(Y, copFun, lower, upper, method = c("DEoptim", "geno
   }
   return(res)
 }
+
+
 
 fitFactorCopulaSubplex <- function(trials, lower, upper, fn, control, cluster, theta0 = NULL){
   res <- parallelLapply(1:trials, function(i){

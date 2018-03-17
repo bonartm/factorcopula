@@ -1,93 +1,155 @@
-matchArgs <- function(args, theta){
-  lapply(args, function(arg){
-    ind <- match(arg, names(theta))
-    if(is.na(ind))
-      arg
-    else
-      theta[ind]
-  })
+#' Configurate the latent variables of a factorcopula model
+#'
+#' @param ... One or more expresssions separated by commas. The name of the expression arguments have to be
+#' a valid random number generators, the expressions have to be lists of named unquoted arguments.#'
+#' @param par a character vector of parameter names used in the specification of the factor matrix
+#'
+#' @return A list of \link[rlang]{quosure}s
+#' @export
+config_factor <- function(..., par = c()){
+  factorspec <- rlang::exprs(...)
+  fc_check(names(factorspec))
+  list(spec = factorspec, par = par, fixed = (length(par) == 0))
 }
 
-simZMat <- function(Z, theta, S, seed = NULL){
-  # Z: named list with random number generators and corresponding additional parameters (empty list if no parameters)
-  set.seed(seed)
-  vapply(names(Z), function(funName) {
-    args <- Z[[funName]]
+#' Configurate the error part of a factorcopula model
+#'
+#' @param ... One named expresssion. The name has to be a
+#' valid random number generator, the expression has to be a list of named unquoted arguments.
+#'
+#' @return A list of \link[rlang]{quosure}s
+#' @export
+config_error <- function(..., par = c()){
+  if (length(rlang::exprs(...)) > 1)
+    stop("Only one error function allowed.")
+  config_factor(..., par = par)
+}
+
+#' Configurate the loadings of a factorcopula model
+#'
+#' @param type Either unrestrictibe, equidependence or bloc-equidependence
+#' @param N Number of observable variables
+#' @param Z Number of latent variables
+#' @param groups Vector of length N with positive increasing integers specifying the group of the variables. Must only be provided if type = bloc-equidependence
+#'
+#' @return A character matrix of parameters which can be used in \link[factorcopula]{fc_create}
+#' @export
+config_beta <- function(type = c("unrestrictive","equidependence", "bloc-equidependence"), N, Z, groups = NULL){
+  type <- match.arg(type)
+  if (type == "unrestrictive"){
+    return(matrix(paste0("beta", 1:(N*Z)), ncol = Z))
+  }
+
+  if (type == "equidependence"){
+    return(matrix(rep(paste0("beta", 1:Z), each = N), ncol = Z, nrow = N))
+
+  }
+
+  if (type == "bloc-equidependence"){
+    stopifnot(!is.null(groups))
+    stopifnot(N == length(groups))
+    return(genBetaParMat(groups))
+  }
+}
+
+#' Simulate values from a factor copula model
+#'
+#' @param beta a character matrix of size [NxK] indicating the names and position of the beta parameters as character strings
+#' @param factor a configuration specified by \link[factorcopula]{config_factor}
+#' @param eps a configuation specified by \link[factorcopula]{config_error}
+#'
+#' @return a function which can be used to simulate values from a factor copula model. It has the parameters theta, S and seed
+#' @export
+fc_create <- function(factor, error, beta){
+  force(factor)
+  force(error)
+  force(beta)
+
+  N <- nrow(beta)
+  Z <- length(factor$spec)
+  stopifnot(ncol(beta) == Z, is.matrix(beta))
+
+  state <- list(theta = -99, S = -99, seed = -99, zMat = matrix(-99), epsMat = matrix(-99))
+
+  function(theta, S, seed = NULL){
+      if(state_changed(state, theta, S, seed, factor$par))
+        zMat <- rand_restore(fc_sim, factor$spec, S, theta, seed)
+      else
+        zMat <- state$zMat
+
+      if(state_changed(state, theta, S, seed, error$par)){
+        epsMat <- rand_restore(fc_sim, error$spec, S*N, theta, seed)
+        epsMat <- matrix(epsMat, ncol = N)
+      } else
+        epsMat <- state$epsMat
+
+      betaMat <- eval_beta(beta, theta)
+
+      state <<- list(theta = theta, S = S, seed = seed, zMat = zMat, epsMat = epsMat)
+
+      X <- zMat%*%t(betaMat) + epsMat
+      apply(X, 2, empDist)
+    }
+}
+
+
+state_changed <- function(state, theta, S, seed, parnames){
+  if (is.null(seed) || is.null(state$seed))
+    res <- TRUE
+  else {
+    res <- any(state$seed != seed, state$S != S, length(parnames) != 0, state$theta[parnames] != theta[parnames])
+  }
+  return(res)
+}
+
+rand_restore <- function(fun, ...){
+  if (exists(".Random.seed", .GlobalEnv))
+    oldseed <- .GlobalEnv$.Random.seed
+  else
+    oldseed <- NULL
+
+  res <- fun(...)
+
+  if (!is.null(oldseed))
+    .GlobalEnv$.Random.seed <- oldseed
+  else
+    rm(".Random.seed", envir = .GlobalEnv)
+  return(res)
+}
+
+fc_sim <- function(config, S, theta, seed){
+  vapply(names(config), function(funName) {
+    set.seed(seed)
+    args <- config[[funName]]
+    args <- rlang::eval_tidy(args, as.list(theta))
     args$n <- S
-    args <- matchArgs(args, theta)
     do.call(funName, args)
   }, numeric(S))
 }
 
-simEpsMat <- function(eps, theta, S, N, seed = NULL){
-  # eps: named list of length 1 with random numer generator for the disturbance term and corresponding parameters
-  set.seed(seed)
-  args <- eps[[1]]
-  args$n <- S*N
-  args <- matchArgs(args, theta)
-  matrix(do.call(names(eps[1]), args), ncol = N)
+eval_beta <- function(beta, theta){
+  pos <- theta[beta]
+  beta[!is.na(pos)] <- pos[!is.na(pos)]
+  matrix(as.numeric(beta), ncol = ncol(beta))
 }
 
-genBetaMat <- function(beta, theta){
-  ind <- match(beta, names(theta))
-  filter <- !is.na(ind)
-  beta[seq_along(beta)[filter]] <- theta[ind[filter]]
-  return(matrix(as.numeric(beta), ncol = ncol(beta)))
+fc_check <- function(names){
+  if(any(names == ""))
+    stop("At least one unnamed factor or error matrix config provided")
+  for(name in names){
+    if (!exists(name))
+      stop("function '", name, "' does not exist")
+  }
 }
 
-
-
-
-#' Simulate values from a factor copula model
-#'
-#' @param beta a character matrix of size [NxK] indicating the names and position of the beta parameters (see example)
-#' @param N the number of variables
-#' @param Z a named list of size K and names equal to a random number generator function which takes an argument n and possibly other arguments passed as numeric values or characters (if parameter)
-#' @param eps a named list of size 1 (see Z)
-#' @param zFixed if TRUE zMatrix is only simulated once and stays fixed
-#' @param epsFixed see zFixed
-#' @param S the number of observations, only needed if zFixed or epsFixed is TRUE
-#'
-#' @return a function which can be used to simulate values from a factor copula model. It has the parameters theta, S and seed
-#' @export
-factorCopula <- function(beta, N, Z, eps, zFixed = FALSE, epsFixed = zFixed, S = NULL){
-  # value: a function with arguments:
-  # theta: a named vector of parameters which is matched to the parameters in Z, eps and beta
-  # S: the number of simulations
-  # seed: possibly a seed to keep the rng fixed during different simulations
-  force(beta)
-
-  if (zFixed|epsFixed)
-    stopifnot(!is.null(S))
-  if (zFixed) {
-    zMat <- simZMat(Z, NULL, S, NULL)
-  }
-  if (epsFixed) {
-    epsMat <- simEpsMat(eps, NULL, S, N, NULL)
-  }
-
-  if (zFixed|epsFixed){
-    function(theta, seed = NULL){
-      if (!zFixed)
-        zMat <- simZMat(Z, theta, S, seed)
-      if (!epsFixed)
-        epsMat <- simEpsMat(eps, theta, S, N, seed)
-      beta <- genBetaMat(beta, theta)
-      X <- zMat%*%t(beta) + epsMat
-      apply(X, 2, empDist)
-    }
-
-  } else {
-    function(theta, S, seed = NULL){
-      zMat <- simZMat(Z, theta, S, seed)
-      epsMat <- simEpsMat(eps, theta, S, N, seed)
-      beta <- genBetaMat(beta, theta)
-      X <- zMat%*%t(beta) + epsMat
-      apply(X, 2, empDist)
+config_fixed <- function(spec){
+  for (sp in spec){
+    catch <- try(rlang::eval_bare(sp), silent = TRUE)
+    if (class(catch) == "try-error"){
+      return(FALSE)
     }
   }
-
-
+  return(TRUE)
 }
 
 

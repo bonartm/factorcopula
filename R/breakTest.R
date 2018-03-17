@@ -1,11 +1,11 @@
-#' Title
+#' Return the p statistics of a recursive factor copula model
 #'
-#' @param theta
-#' @param tSeq
+#' @param theta A matrix with max(tSeq) rows of recursive parameters
+#' @param tSeq A vector of positive integers
 #'
-#' @return
+#' @return for each entray in tSeq a P statistic
 #' @export
-getPStat <- function(theta, tSeq){
+fc_pstat <- function(theta, tSeq){
   stopifnot(!is.null(dim(theta)))
   T <- max(tSeq)
   diff <- apply(theta, 1, function(x) {
@@ -16,32 +16,49 @@ getPStat <- function(theta, tSeq){
   return(P)
 }
 
+#' Calculate recursive test statistics for the moments based break test
+#'
+#' @export
+fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y))){
+  Ydis <- apply(Y, 2, empDist)
+  mFull <- moments(Ydis, k)
+  T <- nrow(Y)
+  mStats <- vapply(tSeq, function(t){
+    diff <- moments(Ydis[1:t, ], k) - mFull
+    (t/T)^2*T*(t(diff) %*% diff)
+  }, numeric(1))
+  return(mStats)
+}
 
 
-# Structural Break Test ---------------------------------------------------
-
-critVal <- function(Y, B, copFun, theta, tSeq, cl = NULL, k = rep(1, ncol(Y))){
+#' Simulate critival values for either the copula or the moments based break test
+#'
+#' @export
+fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, copFun = NULL, theta = NULL, cl = NULL, k = rep(1, ncol(Y))){
   #resY: matrix of standardized residuals from empirical data Y
   #B: number of bootstrap samples
   #moments: function which generates a vector of dependence measures
+  type <- match.arg(type)
   Ydis <- apply(Y, 2, empDist)
   mHat <- moments(Ydis, k)
   T <- nrow(Y)
-  seed <- runif(1, min = 1, max = .Machine$integer.max)
 
-  G <- getGHat(theta, copFun, 0.1, mHat, k, S = 25000, seed)
-  W <- diag(length(mHat))
+  if (type == "copula"){
+    seed <- runif(1, min = 1, max = .Machine$integer.max)
+    G <- getGHat(thetaFull, copFun, 0.1, mHat, k, S = 25000, seed)
+    W <- diag(length(mHat))
+    leftPart <- solve(t(G)%*%W%*%G)%*%t(G)%*%W
+  } else {
+    leftPart <- 1
+  }
 
-
-  leftPart <- solve(t(G)%*%W%*%G)%*%t(G)%*%W
-
-  Kb <- replicate(B, {
+  Kb <- parallelLapply(1:B, function(x) {
     b <- sample(1:T, T, replace = TRUE)
 
     Astar <- lapply(tSeq, function(t) {
       mHatBt <- moments(Ydis[b, ][1:t, ], k)
       A <- t/T*sqrt(T)*(mHatBt - mHat)
-      leftPart %*% A
+      matrix(as.vector(leftPart %*% A), nrow = length(mHat))
     })
 
     Kbt <- vapply(seq_along(tSeq), function(i){
@@ -51,8 +68,8 @@ critVal <- function(Y, B, copFun, theta, tSeq, cl = NULL, k = rep(1, ncol(Y))){
     }, numeric(1))
 
     return(max(Kbt))
-  })
-  return(Kb)
+  }, cl = cl)
+  return(unlist(Kb))
 }
 
 

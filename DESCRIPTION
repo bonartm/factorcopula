@@ -12,7 +12,8 @@ Imports:
   snow,
   parallel,
   data.table,
-  dplyr
+  dplyr,
+  rlang
 Suggests:
   sgt,
   DEoptim,
