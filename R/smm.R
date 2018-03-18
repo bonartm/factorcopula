@@ -9,14 +9,18 @@ getGVal <- function(mHat, copFun, theta, S, seed, k){
 }
 
 getGHat <- function(theta, copFun, eps, mHat, k, S, seed){
-  Gcol <- lapply(seq_along(theta), function(i){
-    upperTheta <- theta + unitVector(length(theta), i)*eps
-    lowerTheta <- theta - unitVector(length(theta), i)*eps
-    gUpper <- getGVal(mHat, copFun, upperTheta, S, seed, k)
-    gLower <- getGVal(mHat, copFun, lowerTheta, S, seed, k)
-    (gUpper - gLower)/2*eps
+  P <- length(theta)
+  M <- length(mHat)
+
+  Gcol <- lapply(1:P, function(j){
+    step <- unitVector(P, j)*eps
+    ghatplus <- getGVal(mHat, copFun, theta + step, S, seed, k)
+    ghatminus <- getGVal(mHat, copFun, theta - step, S, seed, k)
+    (ghatplus-ghatminus)/(2*eps)
   })
-  return(do.call(cbind, Gcol))
+  G <- do.call(cbind, Gcol)
+  stopifnot(nrow(G) == M & ncol(G) == P)
+  return(G)
 }
 
 getSigmaHat <- function(Y, B, k){

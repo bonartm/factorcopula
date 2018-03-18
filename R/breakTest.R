@@ -45,25 +45,26 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, copFun = NULL,
 
   if (type == "copula"){
     seed <- runif(1, min = 1, max = .Machine$integer.max)
-    G <- getGHat(thetaFull, copFun, 0.1, mHat, k, S = 25000, seed)
+    G <- getGHat(theta, copFun, 0.1, mHat, k, S = 25000, seed)
     W <- diag(length(mHat))
     leftPart <- solve(t(G)%*%W%*%G)%*%t(G)%*%W
-  } else {
-    leftPart <- 1
   }
 
   Kb <- parallelLapply(1:B, function(x) {
     b <- sample(1:T, T, replace = TRUE)
 
-    Astar <- lapply(tSeq, function(t) {
+    A <- lapply(tSeq, function(t) {
       mHatBt <- moments(Ydis[b, ][1:t, ], k)
       A <- t/T*sqrt(T)*(mHatBt - mHat)
-      matrix(as.vector(leftPart %*% A), nrow = length(mHat))
+      if (type == "copula"){
+        A <- leftPart %*% A
+      }
+      return(A)
     })
 
     Kbt <- vapply(seq_along(tSeq), function(i){
       t <- tSeq[i]
-      diff <- Astar[[i]] - t/T*Astar[[length(tSeq)]]
+      diff <- A[[i]] - t/T*A[[length(tSeq)]]
       t(diff)%*%diff
     }, numeric(1))
 
