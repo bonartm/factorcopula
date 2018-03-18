@@ -106,7 +106,7 @@ fc_fit <- function(Y, copFun, lower, upper, method = c("DEoptim", "genoud", "sub
       stop("Please specify the number of trials for the subplex method.")
     }
 
-    res <- fitFactorCopulaSubplex(trials = trials, lower = lower, upper = upper, fn = opti, cluster = cluster, control = control, theta0 = NULL)
+    res <- fitFactorCopulaSubplex(trials = trials, lower = lower, upper = upper, fn = opti, cluster = cluster, control = control)
 
   }
   return(res)
