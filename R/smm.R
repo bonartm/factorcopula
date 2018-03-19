@@ -130,7 +130,7 @@ fitFactorCopulaSubplex <- function(trials, lower, upper, fn, control, cluster, t
   colnames(theta) <- names(lower)
   Qval <- unlist(lapply(res, function(x) x$value))
   iter <- unlist(lapply(res, function(x) x$iter))
-  res <- data.frame(theta, Q = Qval, iterations = iter)
+  res <- list(Q = Qval, iterations = iter, params = theta, best = theta[which.min(Qval),])
   return(res)
 }
 
