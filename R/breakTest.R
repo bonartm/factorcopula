@@ -19,15 +19,15 @@ fc_pstat <- function(theta, tSeq){
 #' Calculate recursive test statistics for the moments based break test
 #'
 #' @export
-fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y))){
+fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL){
   Ydis <- apply(Y, 2, empDist)
   mFull <- moments(Ydis, k)
   T <- nrow(Y)
-  mStats <- vapply(tSeq, function(t){
+  mStats <- parallelLapply(tSeq, function(t){
     diff <- moments(Ydis[1:t, ], k) - mFull
     (t/T)^2*T*(t(diff) %*% diff)
-  }, numeric(1))
-  return(mStats)
+  }, cl = cl)
+  return(unlist(mStats))
 }
 
 

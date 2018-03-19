@@ -84,12 +84,6 @@ unitVector <- function(size, k){
   return(vec)
 }
 
-#' Title
-#'
-#' @param k
-#'
-#' @return
-#' @export
 genBetaParMat <- function(k){
   kTab <- table(k)
   M <- max(k)

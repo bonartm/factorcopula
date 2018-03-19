@@ -4,7 +4,7 @@
 \alias{fc_mstat}
 \title{Calculate recursive test statistics for the moments based break test}
 \usage{
-fc_mstat(Y, tSeq, k = rep(1, ncol(Y)))
+fc_mstat(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL)
 }
 \description{
 Calculate recursive test statistics for the moments based break test

@@ -129,8 +129,8 @@ fitFactorCopulaSubplex <- function(trials, lower, upper, fn, control, cluster, t
   theta <- do.call(rbind, lapply(res, function(x) x$par))
   colnames(theta) <- names(lower)
   Qval <- unlist(lapply(res, function(x) x$value))
-  converged <- unlist(lapply(res, function(x) x$convergence != 5))
-  res <- cbind(theta, Q = Qval, convergence = converged)
+  iter <- unlist(lapply(res, function(x) x$iter))
+  res <- data.frame(theta, Q = Qval, iterations = iter)
   return(res)
 }
 

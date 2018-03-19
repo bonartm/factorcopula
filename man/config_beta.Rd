@@ -4,15 +4,14 @@
 \alias{config_beta}
 \title{Configurate the loadings of a factorcopula model}
 \usage{
-config_beta(type = c("unrestrictive", "equidependence",
-  "bloc-equidependence"), N, Z, groups = NULL)
+config_beta(N, k, Z = NULL)
 }
 \arguments{
-\item{type}{Either unrestrictibe, equidependence or bloc-equidependence}
-
 \item{N}{Number of observable variables}
 
 \item{Z}{Number of latent variables}
+
+\item{type}{Either unrestrictibe, equidependence or bloc-equidependence}
 
 \item{groups}{Vector of length N with positive increasing integers specifying the group of the variables. Must only be provided if type = bloc-equidependence}
 }

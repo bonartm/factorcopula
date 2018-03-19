@@ -34,22 +34,25 @@ config_error <- function(..., par = c()){
 #'
 #' @return A character matrix of parameters which can be used in \link[factorcopula]{fc_create}
 #' @export
-config_beta <- function(type = c("unrestrictive","equidependence", "bloc-equidependence"), N, Z, groups = NULL){
-  type <- match.arg(type)
-  if (type == "unrestrictive"){
+config_beta <- function(N, k, Z = NULL){
+  M <- max(k)
+  tab <- table(k)
+  stopifnot(sum(tab) == N)
+  stopifnot(length(tab) == M)
+  stopifnot(all(as.numeric(names(tab)) == 1:M))
+
+  if (M == N){# unrestrictive model
+    stopifnot(!is.null(Z))
     return(matrix(paste0("beta", 1:(N*Z)), ncol = Z))
   }
 
-  if (type == "equidependence"){
+  if (all(M == 1)){# equidependence
+    stopifnot(!is.null(Z))
     return(matrix(rep(paste0("beta", 1:Z), each = N), ncol = Z, nrow = N))
-
   }
 
-  if (type == "bloc-equidependence"){
-    stopifnot(!is.null(groups))
-    stopifnot(N == length(groups))
-    return(genBetaParMat(groups))
-  }
+  # bloc- equidependence
+  return(genBetaParMat(k))
 }
 
 #' Simulate values from a factor copula model
