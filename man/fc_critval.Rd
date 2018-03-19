@@ -4,8 +4,8 @@
 \alias{fc_critval}
 \title{Simulate critival values for either the copula or the moments based break test}
 \usage{
-fc_critval(type = c("moments", "copula"), Y, B, tSeq, copFun = NULL,
-  theta = NULL, cl = NULL, k = rep(1, ncol(Y)))
+fc_critval(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NULL,
+  theta = NULL, cl = NULL)
 }
 \description{
 Simulate critival values for either the copula or the moments based break test

@@ -4,12 +4,6 @@ checkNamespace <- function(name){
   }
 }
 
-#' Title
-#'
-#' @param x
-#'
-#' @return
-#' @export
 getStandResiduals <- function(x){
   checkNamespace("rugarch")
   spec = rugarch::ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)),

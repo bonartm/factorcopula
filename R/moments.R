@@ -32,14 +32,14 @@ moments <- function(U, k = rep(1, ncol(U))){
     }
     moments <- as.vector(moments)
 
-  } else {# restrictive model
+  } else {# restrictive model: equidependence or bloc-equidependence
     moments <- matrix(0, ncol = 5, nrow = M)
     for (r in 1:M){
       for (s in r:M){
         m <- .moments(U, elem[elem[,3] == r & elem[,4] == s, 1:2, drop = FALSE])
-        if (r == s){# intra dependence
+        if (r == s){#intra dependence, add only to one group
           moments[r, ] <- moments[r, ] + m
-        } else {# inter dependence
+        } else {# inter dependence, add to both groups
           moments[r, ] <- moments[r, ] + m
           moments[s, ] <- moments[s, ] + m
         }

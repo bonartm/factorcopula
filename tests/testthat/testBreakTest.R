@@ -45,7 +45,7 @@ M <- fc_mstat(Y, tSeq)
 
 cl <- makeCluster(4)
 clusterExport(cl, ls())
-loadPackagesOnCluster(cl, "factorcopula")
+cluster_library(cl, "factorcopula")
 thetaFull <- fc_fit(Y, cop, lower = lower, upper = upper, method = "subplex",
        control = list(stopval = 0, xtol_rel = 1e-11, maxeval = 1000), trials = 8, S = 25000, cluster = cl)
 thetaFull <- thetaFull[which.min(thetaFull[,"Q"]),"beta1"]

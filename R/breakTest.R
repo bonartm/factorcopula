@@ -23,10 +23,10 @@ fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL){
   Ydis <- apply(Y, 2, empDist)
   mFull <- moments(Ydis, k)
   T <- nrow(Y)
-  mStats <- parallelLapply(tSeq, function(t){
+  mStats <- parallelLapply(tSeq, function(t, mFull, T, Ydis){
     diff <- moments(Ydis[1:t, ], k) - mFull
     (t/T)^2*T*(t(diff) %*% diff)
-  }, cl = cl)
+  }, cl, mFull = mFull, T = T, Ydis = Ydis)
   return(unlist(mStats))
 }
 
@@ -34,7 +34,7 @@ fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL){
 #' Simulate critival values for either the copula or the moments based break test
 #'
 #' @export
-fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, copFun = NULL, theta = NULL, cl = NULL, k = rep(1, ncol(Y))){
+fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NULL, theta = NULL, cl = NULL){
   #resY: matrix of standardized residuals from empirical data Y
   #B: number of bootstrap samples
   #moments: function which generates a vector of dependence measures
@@ -43,14 +43,16 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, copFun = NULL,
   mHat <- moments(Ydis, k)
   T <- nrow(Y)
 
-  if (type == "copula"){
+  if (type %in% c("both", "copula")){
     seed <- runif(1, min = 1, max = .Machine$integer.max)
     G <- getGHat(theta, copFun, 0.1, mHat, k, S = 25000, seed)
     W <- diag(length(mHat))
     leftPart <- solve(t(G)%*%W%*%G)%*%t(G)%*%W
+  } else {
+    leftPart <- NULL
   }
 
-  Kb <- parallelLapply(1:B, function(x) {
+  Kb <- parallelLapply(1:B, function(x, T, tSeq, Ydis, k, leftPart, type) {
     b <- sample(1:T, T, replace = TRUE)
 
     A <- lapply(tSeq, function(t) {
@@ -69,7 +71,7 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, copFun = NULL,
     }, numeric(1))
 
     return(max(Kbt))
-  }, cl = cl)
+  }, cl = cl, T = T, tSeq = tSeq, Ydis = Ydis, k = k, leftPart = leftPart, type = type)
   return(unlist(Kb))
 }
 

@@ -5,7 +5,7 @@
 #'
 #' @return TRUE if all packages could be loaded on all cluster nodes
 #' @export
-loadPackagesOnCluster <- function(cl, packages){
+cluster_library <- function(cl, packages){
   snow::clusterExport(cl, "packages", envir = environment())
   res <- snow::clusterEvalQ(cl, invisible(lapply(packages, library, character.only = TRUE, logical.return = TRUE)))
   all(unlist(res))
