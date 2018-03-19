@@ -28,14 +28,14 @@ config_error <- function(..., par = c()){
 #' Configurate the loadings of a factorcopula model
 #'
 #' @param type Either unrestrictibe, equidependence or bloc-equidependence
-#' @param N Number of observable variables
+#' @param k Numeric vector of length N with eventually positive increasing integers from 1 to N.
 #' @param Z Number of latent variables
-#' @param groups Vector of length N with positive increasing integers specifying the group of the variables. Must only be provided if type = bloc-equidependence
 #'
 #' @return A character matrix of parameters which can be used in \link[factorcopula]{fc_create}
 #' @export
-config_beta <- function(N, k, Z = NULL){
+config_beta <- function(k, Z = NULL){
   M <- max(k)
+  N <- length(k)
   tab <- table(k)
   stopifnot(sum(tab) == N)
   stopifnot(length(tab) == M)

@@ -4,16 +4,14 @@
 \alias{config_beta}
 \title{Configurate the loadings of a factorcopula model}
 \usage{
-config_beta(N, k, Z = NULL)
+config_beta(k, Z = NULL)
 }
 \arguments{
-\item{N}{Number of observable variables}
+\item{k}{Numeric vector of length N with eventually positive increasing integers from 1 to N.}
 
 \item{Z}{Number of latent variables}
 
 \item{type}{Either unrestrictibe, equidependence or bloc-equidependence}
-
-\item{groups}{Vector of length N with positive increasing integers specifying the group of the variables. Must only be provided if type = bloc-equidependence}
 }
 \value{
 A character matrix of parameters which can be used in \link[factorcopula]{fc_create}

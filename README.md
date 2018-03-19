@@ -19,28 +19,31 @@ devtools::install_github("bonartm/factorcopula")
 library(factorcopula)
 
 # define a one factor skew-t copula
-N <- 2
-Z <- list(rst = list(nuInv = "nuInv", lambda = "lambda"))
-eps <- list(rtInv = (list(dfInv = "nuInv")))
-beta <- matrix("beta1", nrow = N)
 
-# define the set of true parameters and lower and upper bounds
-theta <- c(beta1 = 2, nuInv = 0.25, lambda = -0.8)
-lower <- c(0, 0.01, -0.99)
-upper <- c(10, 0.49, 0.99)
-names(lower) <- names(theta)
-names(upper) <- names(theta)
+t <- 1500
+k <- c(1, 1) # all variables in the same groups for an equidependence model
+beta <- config_beta(k = k, Z = 1)
+Z <- config_factor(rst = list(nu = 1/nuInv, lambda = lambda), par = c("nuInv", "lambda"))
+eps <- config_error(rt = list(df = 1/nuInv), par = c("nuInv"))
+theta0 <- c(beta1 = 1.5, nuInv = 0.25, lambda = -0.8)
 
 # generate the copula function and simulate values from the copua model
-copFun <- factorCopula(beta, N, Z, eps)
-U <- copFun(theta, 1000)
+cop <- fc_create(Z, eps, beta)
+U <- cop(theta0, t)
 
 # use some marginal distributions (here normal distribution) to simulate some Y values
 Y <- qnorm(U)
 
-# fit the copula and plot real values aggainst fitted values
-m <- fitFactorCopula(Y, copFun, S = 10000, lower = lower, upper = upper, method = "subplex", 
-                      control = list(stopval = 0, xtol_rel = 0, maxeval = 2000, ftol_abs = 1e-5, runs = 4))
+# define boundaries for optimzation
+lower <- c(0, 0.01, -0.99)
+upper <- c(10, 0.49, 0.99)
+names(lower) <- names(theta0)
+names(upper) <- names(theta0)
+
+# fit the copula and plot real values aggainst simulated values
+m <- fc_fit(Y, cop, lower = lower, upper = upper, method = "subplex",
+         control = list(stopval = 0, xtol_rel = 1e-12, maxeval = 3000), trials = 1, S = 25000, k = k)
+par <- unlist(m[1, 1:3])
 plot(Y, pch = 20)
-points(qnorm(copFun(m$par, 2000)), col = "red", pch = 20)
+points(qnorm(cop(par, 2000)), col = "red", pch = 20)
 ````
