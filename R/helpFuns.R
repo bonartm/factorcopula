@@ -19,18 +19,25 @@ empDist <- function(x){
 }
 
 rankCor <- function(u, v){
-  # t <- length(u)
-  # #12/t*sum(u*v) - 3
-  # 12*(t/(t^2-1))*sum(u*v)-3*(t+1)/(t-1)
-  cor(u, v)
+  t <- length(u)
+  #12/t*sum(u*v) - 3
+  12*(t/(t^2-1))*sum(u*v)-3*(t+1)/(t-1)
+  #cor(u, v)
 }
 
-rst <- function(n, nuInv = 1e-10, lambda = 0){
+#' Generate random numbers from the skewed t distribution
+#'
+#' @param n number of observations
+#' @param nu degree of freedoms
+#' @param lambda skewness factor between (-1:1)
+#'
+#' @return a vactor of length n
+#' @export
+rst <- function(n, nu = 1e9, lambda = 0){
   # Generates random numbers from the skewed t distribution by Hansen (1994)
   # nuInv: Inverse nu parameter (degrees of freedom, q) (0, )
   # lambda: skewness parameter (-1, 1)
-  nu <- 1/nuInv
-  stopifnot(nu >= 2 & nuInv > 0 & lambda > -1 & lambda < 1)
+  stopifnot(nu >= 2 & lambda > -1 & lambda < 1)
 
   u <- runif(n)
   if (is.infinite(suppressWarnings(gamma(nu/2)))){
@@ -54,10 +61,6 @@ rst <- function(n, nuInv = 1e-10, lambda = 0){
   return(inv)
 }
 
-rtInv <- function(n, dfInv){
-  rt(n, 1/dfInv)
-}
-
 quantDep <- function(u, v, qSeq){
   t <- length(u)
   vapply(qSeq, function(q){
@@ -67,6 +70,12 @@ quantDep <- function(u, v, qSeq){
       sum(u > q & v > q)/(t*(1-q))
     }
   }, numeric(1))
+}
+
+unitVector <- function(size, k){
+  vec <- rep(0, size)
+  vec[k] <- 1
+  return(vec)
 }
 
 genBetaParMat <- function(k){
