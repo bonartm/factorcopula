@@ -4,9 +4,7 @@
 \alias{fc_fit}
 \title{Fit a factor copula model}
 \usage{
-fc_fit(Y, copFun, lower, upper, method = c("DEoptim", "genoud", "subplex",
-  "two-stage"), control, cluster = NULL, trials = NULL, S = NULL,
-  k = rep(1, ncol(Y)), seed = runif(1, 1, .Machine$integer.max))
+fc_fit(Y, copFun, lower, upper, recursive, control, S, k, cl)
 }
 \arguments{
 \item{Y}{A dataframe or matrix like object}
@@ -17,18 +15,16 @@ fc_fit(Y, copFun, lower, upper, method = c("DEoptim", "genoud", "subplex",
 
 \item{upper}{Upper bound for optimazation: Named vector with parameters}
 
-\item{method}{"DEoptim", "genoud" or "subplex" (see Details)}
+\item{recursive}{Wether to estimate recursive or just full model}
 
-\item{control}{named list of arguments passed to the optimizer}
+\item{control}{named list of arguments passed to the Subplex Algorithm (see nl.opts for help)}
 
 \item{S}{The number of simulations to use}
 
 \item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
-
-\item{seed}{Fixed random number seed to use during optimazation}
 }
 \value{
-a list of optimazation results
+a matrix or vector of parameters
 }
 \description{
 Fit a factor copula model

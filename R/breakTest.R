@@ -7,12 +7,16 @@
 #' @export
 fc_pstat <- function(theta, tSeq){
   stopifnot(!is.null(dim(theta)))
+  theta <- as.matrix(theta)
   T <- max(tSeq)
-  diff <- apply(theta, 1, function(x) {
-    diff <- (x - theta[nrow(theta), ])
+  thetaFull <- theta[nrow(theta), ]
+
+  leftPart <- vapply(1:nrow(theta), function(i){
+    diff <- theta[i, ] - thetaFull
     t(diff)%*%diff
-  })
-  P <- (tSeq/T)^2*T*diff
+  }, numeric(1))
+
+  P <- (tSeq/T)^2*T*leftPart
   return(P)
 }
 
