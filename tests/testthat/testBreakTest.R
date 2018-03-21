@@ -10,24 +10,24 @@ options(cheopsr.account = "AG-Wied")
 options(cheopsr.username = "bonartm")
 
 N <- 2
-k <- c(1, 1)
+k <- c(1, 2)
 Z <- config_factor(rst = list(nu = 1/0.25, lambda = -0.8))
 eps <- config_error(rt = list(df = 1/0.25))
 beta <- config_beta(k, 1)
 
 cop <- fc_create(Z, eps, beta)
 
-theta0 <- c(beta1 = 0.5)
-theta1 <- c(beta1 = 1.5)
-lower <- c(beta1 = 0)
-upper <- c(beta1 = 5)
+theta0 <- c(beta1 = 0.5, beta2 = 1.5)
+theta1 <- c(beta1 = 1.5, beta2 = 1.5)
+lower <- c(beta1 = 0, beta2 = 0)
+upper <- c(beta1 = 5, beta2 = 5)
 
 Y <- qnorm(rbind(cop(theta0, 1000), cop(theta1, 500)))
 brk <- 1000
 
 cl <- makeCluster(4)
 cluster_library(cl, "factorcopula")
-res <- fc_fit(Y[1000:1500, ], cop, lower, upper, recursive = FALSE, S = 25000, k = k, cl = cl,
+res <- fc_fit(Y[1:304, ], cop, lower, upper, recursive = TRUE, S = 25000, k = k, cl = cl,
        control = list(stopval = 0, xtol_rel = 1e-15, maxeval = 1000))
 stopCluster(cl)
 

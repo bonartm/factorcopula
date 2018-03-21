@@ -101,7 +101,9 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
       nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
                     control = control, seed = seed, mHat = mHat)
     })
-    theta <- data.frame(t = T, model_best(full))
+    best <- model_best(full)
+    cat("Estimated value(s):", best, "\n")
+    theta <- data.frame(t = T, best)
   }
   names(theta) <- c("t", names(lower))
   return(theta)
@@ -114,5 +116,5 @@ model_theta <- function(models){
 model_best <- function(models){
   theta <- model_theta(models)
   Qval <- vapply(models, function(x) x$value, numeric(1))
-  theta[which.min(Qval), ]
+  theta[which.min(Qval), , drop = FALSE]
 }
