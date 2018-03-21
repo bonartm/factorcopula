@@ -18,33 +18,27 @@ eps <- config_error(rt = list(df = 1/0.25))
 
 cop <- fc_create(Z, eps, beta)
 
-theta0 <- c(beta1 = 0, beta2 = 1.5, beta3 = 0, beta4 = 1.5)
+theta0 <- c(beta1 = 0.5, beta2 = 1, beta3 = 1.5, beta4 = 2)
 theta1 <- c(beta1 = 1.5, beta2 = 1.5, beta3 = 1.5, beta4 = 1.5)
 lower <- c(beta1 = 0, beta2 = 0, beta3 = 0, beta4 = 0)
-upper <- c(beta1 = 5, beta2 = 5, beta3 = 5, beta4 = 5)
+upper <- c(beta1 = 6, beta2 = 6, beta3 = 6, beta4 = 6)
 
 Y <- qnorm(rbind(cop(theta0, 2000), cop(theta1, 1000)))
 brk <- 2000
+tSeq <- 300:nrow(Y)
 
-cl <- makeCluster(4)
-cluster_library(cl, "factorcopula")
-res <- fc_fit(Y[1:2000, ], cop, lower, upper, recursive = FALSE, S = 25000, k = k, cl = cl,
-       control = list(stopval = 0, xtol_rel = 1e-15, maxeval = 1000))
-stopCluster(cl)
-
-opt <- cheops_slurmcontrol(nodes = 40, tasks = 4, mem = "2gb", time = "00:20:00")
-job <- cheops_run(fc_fit, opt, "test",
+opt <- cheops_slurmcontrol(nodes = 40, tasks = 4, mem = "2gb", time = "01:00:00")
+job <- cheops_run(fc_fit, opt, "rec-test",
            args = list(Y = Y, copFun = cop, lower = lower, upper = upper, k = k, recursive = TRUE,
                        control = list(stopval = 0, xtol_rel = 1e-13, maxeval = 1000), S = 25000),
            packages = "factorcopula")
-
 cheops_jobs()
-cat(cheops_getlog("test"), sep = "\n")
+cat(cheops_getlog("rec-test"), sep = "\n")
 #cheops_cancel(9297698)
-res <- cheops_readRDS('./test/res.rds')
-plot(res$t, res$theta, type = "l")
-
-p <- fc_pstat(as.matrix(res$theta, ncol = 1), res$t)
+res <- cheops_readRDS('./rec-test/res.rds')
+p <- fc_pstat(res[,-1], res$t)
 plot(res$t, p, type = "l")
 
-
+m <- fc_mstat(Y, tSeq, k)
+plot(tSeq, m, type = "l")
+abline(v = brk)

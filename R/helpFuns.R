@@ -19,10 +19,10 @@ empDist <- function(x){
 }
 
 rankCor <- function(u, v){
-  t <- length(u)
+  #t <- length(u)
   #12/t*sum(u*v) - 3
-  12*(t/(t^2-1))*sum(u*v)-3*(t+1)/(t-1)
-  #cor(u, v)
+  #12*(t/(t^2-1))*sum(u*v)-3*(t+1)/(t-1)
+  cor(u, v)
 }
 
 #' Generate random numbers from the skewed t distribution

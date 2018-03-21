@@ -72,57 +72,54 @@ fc_create <- function(factor, error, beta){
   Z <- length(factor$spec)
   stopifnot(ncol(beta) == Z, is.matrix(beta))
 
-  state <- list(theta = -99, S = -99, seed = -99, zMat = matrix(-99), epsMat = matrix(-99))
+  state <- list(theta = -99, S = -99, fixed = FALSE, zMat = matrix(-99), epsMat = matrix(-99))
 
-  function(theta, S, seed = NULL){
-      if(state_changed(state, theta, S, seed, factor$par))
-        zMat <- rand_restore(fc_sim, factor$spec, S, theta, seed)
+  function(theta, S, fixed = FALSE){
+      if(state_changed(state, theta, S, fixed, factor$par))
+        zMat <- fc_sim(factor$spec, S, theta)
       else
         zMat <- state$zMat
 
-      if(state_changed(state, theta, S, seed, error$par)){
-        epsMat <- rand_restore(fc_sim, error$spec, S*N, theta, seed)
+      if(state_changed(state, theta, S, fixed, error$par)){
+        epsMat <- fc_sim(error$spec, S*N, theta)
         epsMat <- matrix(epsMat, ncol = N)
       } else
         epsMat <- state$epsMat
 
       betaMat <- eval_beta(beta, theta)
-
-      state <<- list(theta = theta, S = S, seed = seed, zMat = zMat, epsMat = epsMat)
-
+      state <<- list(theta = theta, S = S, fixed = fixed, zMat = zMat, epsMat = epsMat)
       X <- zMat%*%t(betaMat) + epsMat
       apply(X, 2, empDist)
     }
 }
 
 
-state_changed <- function(state, theta, S, seed, parnames){
-  if (is.null(seed) || is.null(state$seed))
+state_changed <- function(state, theta, S, fixed, parnames){
+  if (!fixed)
     res <- TRUE
   else {
-    res <- any(state$seed != seed, state$S != S, length(parnames) != 0, state$theta[parnames] != theta[parnames])
+    res <- any(state$S != S, length(parnames) != 0, state$theta[parnames] != theta[parnames])
   }
   return(res)
 }
 
-rand_restore <- function(fun, ...){
-  if (exists(".Random.seed", .GlobalEnv))
-    oldseed <- .GlobalEnv$.Random.seed
-  else
-    oldseed <- NULL
+# rand_restore <- function(fun, ...){
+#   if (exists(".Random.seed", .GlobalEnv))
+#     oldseed <- .GlobalEnv$.Random.seed
+#   else
+#     oldseed <- NULL
+#
+#   res <- fun(...)
+#
+#   if (!is.null(oldseed))
+#     .GlobalEnv$.Random.seed <- oldseed
+#   else
+#     rm(".Random.seed", envir = .GlobalEnv)
+#   return(res)
+# }
 
-  res <- fun(...)
-
-  if (!is.null(oldseed))
-    .GlobalEnv$.Random.seed <- oldseed
-  else
-    rm(".Random.seed", envir = .GlobalEnv)
-  return(res)
-}
-
-fc_sim <- function(config, S, theta, seed){
+fc_sim <- function(config, S, theta){
   vapply(names(config), function(funName) {
-    set.seed(seed)
     args <- config[[funName]]
     args <- rlang::eval_tidy(args, as.list(theta))
     args$n <- S
@@ -145,15 +142,15 @@ fc_check <- function(names){
   }
 }
 
-config_fixed <- function(spec){
-  for (sp in spec){
-    catch <- try(rlang::eval_bare(sp), silent = TRUE)
-    if (class(catch) == "try-error"){
-      return(FALSE)
-    }
-  }
-  return(TRUE)
-}
+# config_fixed <- function(spec){
+#   for (sp in spec){
+#     catch <- try(rlang::eval_bare(sp), silent = TRUE)
+#     if (class(catch) == "try-error"){
+#       return(FALSE)
+#     }
+#   }
+#   return(TRUE)
+# }
 
 
 

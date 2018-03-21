@@ -2,20 +2,20 @@ getQVal <- function(gVal, W){
   t(gVal)%*%W%*%gVal
 }
 
-getGVal <- function(mHat, copFun, theta, S, seed, k){
-  U <- copFun(theta, S, seed)
+getGVal <- function(mHat, copFun, theta, S, fixed, k){
+  U <- copFun(theta, S, fixed)
   mTilde <- moments(U, k)
   return(mHat - mTilde)
 }
 
-getGHat <- function(theta, copFun, eps, mHat, k, S, seed){
+getGHat <- function(theta, copFun, eps, mHat, k, S){
   P <- length(theta)
   M <- length(mHat)
 
   Gcol <- lapply(1:P, function(j){
     step <- unitVector(P, j)*eps
-    ghatplus <- getGVal(mHat, copFun, theta + step, S, seed, k)
-    ghatminus <- getGVal(mHat, copFun, theta - step, S, seed, k)
+    ghatplus <- getGVal(mHat, copFun, theta + step, S, TRUE, k)
+    ghatminus <- getGVal(mHat, copFun, theta - step, S, TRUE, k)
     (ghatplus-ghatminus)/(2*eps)
   })
   G <- do.call(cbind, Gcol)
@@ -65,9 +65,9 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
   N <- ncol(Yres)
   W <- diag(length(mHat))
 
-  opti <- function(theta, seed, mHat){
+  opti <- function(theta, mHat){
     names(theta) <- names(lower)
-    gVal <-getGVal(mHat, copFun, theta, S, seed, k)
+    gVal <-getGVal(mHat, copFun, theta, S, TRUE, k)
     as.vector(getQVal(gVal, W))
   }
 
@@ -77,9 +77,8 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
     start <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
       theta0 <- runif(length(lower), lower, upper)
       names(theta0) <- names(lower)
-      seedStart <- runif(1, 1, .Machine$integer.max)
       nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
-                    control = control, seed = seedStart, mHat = moments(Yres[1:min(tSeq), ], k))
+                    control = control, mHat = moments(Yres[1:min(tSeq), ], k))
     })
     start <- model_best(start)
     names(start$theta) <- names(lower)
@@ -88,9 +87,8 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
     snow::clusterExport(cl, list("start"), environment())
 
     result <- snow::clusterApplyLB(cl, tSeq, function(t){
-      seed <- runif(1, 1, .Machine$integer.max)
       nloptr::sbplx(x0 = start$theta, fn = opti, lower = lower, upper = upper,
-                    control = control, seed = seed, mHat = moments(Yres, k))
+                    control = control,mHat = moments(Yres, k))
     })
     theta <- data.frame(t = tSeq, model_theta(result))
   } else {
@@ -100,9 +98,8 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
     full <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
       theta0 <- runif(length(lower), lower, upper)
       names(theta0) <- names(lower)
-      seed <- runif(1, 1, .Machine$integer.max)
       nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
-                    control = control, seed = seed, mHat = mHat)
+                    control = control, mHat = mHat)
     })
     theta <- model_theta(full)
     for (i in 1:nrow(theta)){

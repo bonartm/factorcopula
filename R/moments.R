@@ -5,7 +5,9 @@ dependence <- function(u, v, q = c(0.05, 0.10, 0.90, 0.95)){
 }
 
 .moments <- function(U, index){
-  dep <- apply(index, 1, function(x) dependence(U[,x[1]], U[, x[2]]))
+  dep <- apply(index, 1, function(x) {
+    dependence(U[,x[1]], U[, x[2]])
+  })
   rowMeans(dep)
 }
 
@@ -37,6 +39,7 @@ moments <- function(U, k = rep(1, ncol(U))){
     for (r in 1:M){
       for (s in r:M){
         m <- .moments(U, elem[elem[,3] == r & elem[,4] == s, 1:2, drop = FALSE])
+        m <- m/M
         if (r == s){#intra dependence, add only to one group
           moments[r, ] <- moments[r, ] + m
         } else {# inter dependence, add to both groups
@@ -45,8 +48,6 @@ moments <- function(U, k = rep(1, ncol(U))){
         }
       }
     }
-    moments <- as.vector(moments/M)
   }
-
-  return(moments)
+  return(c(t(moments)))
 }
