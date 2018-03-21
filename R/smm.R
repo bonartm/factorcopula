@@ -88,7 +88,7 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
 
     result <- snow::clusterApplyLB(cl, tSeq, function(t){
       nloptr::sbplx(x0 = start$theta, fn = opti, lower = lower, upper = upper,
-                    control = control,mHat = moments(Yres, k))
+                    control = control, mHat = moments(Yres[1:t, ], k))
     })
     theta <- data.frame(t = tSeq, model_theta(result))
   } else {
