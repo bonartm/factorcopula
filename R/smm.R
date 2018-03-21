@@ -55,11 +55,14 @@ getOmegaHat <- function(G, W, sigma){
 fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
 
   Yres <- apply(Y, 2, empDist)
+  mHat <- moments(Yres, k)
 
   T <- nrow(Yres)
+  if (T <= 300){
+    stop("Number of observations is to small.")
+  }
   tSeq <- 300:T
   N <- ncol(Yres)
-  mHat <- moments(Yres, k)
   W <- diag(length(mHat))
 
   opti <- function(theta, seed, mHat){
@@ -79,19 +82,19 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
                     control = control, seed = seedStart, mHat = moments(Yres[1:min(tSeq), ], k))
     })
     start <- model_best(start)
-    names(start) <- names(lower)
+    names(start$theta) <- names(lower)
 
-    cat("Estimated starting value(s):", start, "\n")
+    cat("Estimated starting value(s):", start$theta, "- Q:",start$Q, "\n")
     snow::clusterExport(cl, list("start"), environment())
 
     result <- snow::clusterApplyLB(cl, tSeq, function(t){
       seed <- runif(1, 1, .Machine$integer.max)
-      nloptr::sbplx(x0 = start, fn = opti, lower = lower, upper = upper,
+      nloptr::sbplx(x0 = start$theta, fn = opti, lower = lower, upper = upper,
                     control = control, seed = seed, mHat = moments(Yres, k))
     })
     theta <- data.frame(t = tSeq, model_theta(result))
   } else {
-    cat("Full model estimation\n")
+    cat("Full model estimation with",length(cl), "trials\n")
     snow::clusterExport(cl, ls(envir = environment()), environment())
 
     full <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
@@ -101,20 +104,24 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
       nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
                     control = control, seed = seed, mHat = mHat)
     })
+    theta <- model_theta(full)
+    for (i in 1:nrow(theta)){
+      cat(i, "Estimated value(s):", theta[i, ], "\n")
+    }
     best <- model_best(full)
-    cat("Estimated value(s):", best, "\n")
-    theta <- data.frame(t = T, best)
+    cat("Best model value(s):", best$theta, "- Q:",best$Q, "\n")
+    theta <- data.frame(t = T, best$theta)
   }
   names(theta) <- c("t", names(lower))
   return(theta)
 }
 
 model_theta <- function(models){
-  do.call(rbind, lapply(models, function(x) x$par))
+  do.call(rbind, lapply(models, function(x) round(x$par,4)))
 }
 
 model_best <- function(models){
   theta <- model_theta(models)
-  Qval <- vapply(models, function(x) x$value, numeric(1))
-  theta[which.min(Qval), , drop = FALSE]
+  Qval <- vapply(models, function(x) round(x$value,4), numeric(1))
+  list(theta = theta[which.min(Qval), , drop = FALSE], Q = Qval[which.min(Qval)])
 }
