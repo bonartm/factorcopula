@@ -27,7 +27,7 @@ brk <- 1000
 
 cl <- makeCluster(4)
 cluster_library(cl, "factorcopula")
-res <- fc_fit(Y, cop, lower, upper, recursive = FALSE, S = 25000, k = k, cl = cl,
+res <- fc_fit(Y[1000:1500, ], cop, lower, upper, recursive = FALSE, S = 25000, k = k, cl = cl,
        control = list(stopval = 0, xtol_rel = 1e-15, maxeval = 1000))
 stopCluster(cl)
 
@@ -41,4 +41,9 @@ cheops_jobs()
 cat(cheops_getlog("test"), sep = "\n")
 #cheops_cancel(9297698)
 res <- cheops_readRDS('./test/res.rds')
+plot(res$t, res$theta, type = "l")
+
+p <- fc_pstat(as.matrix(res$theta, ncol = 1), res$t)
+plot(res$t, p, type = "l")
+
 

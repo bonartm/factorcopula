@@ -87,9 +87,9 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
     result <- snow::clusterApplyLB(cl, tSeq, function(t){
       seed <- runif(1, 1, .Machine$integer.max)
       nloptr::sbplx(x0 = start, fn = opti, lower = lower, upper = upper,
-                    control = control, seed = seed, mHat = moments(Yres[1:t, ], k))
+                    control = control, seed = seed, mHat = moments(Yres, k))
     })
-    theta <- data.frame(t = tSeq, theta = model_theta(result))
+    theta <- data.frame(t = tSeq, model_theta(result))
   } else {
     cat("Full model estimation\n")
     snow::clusterExport(cl, ls(envir = environment()), environment())
@@ -101,8 +101,9 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
       nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
                     control = control, seed = seed, mHat = mHat)
     })
-    theta <- data.frame(t = T, theta = model_best(full))
+    theta <- data.frame(t = T, model_best(full))
   }
+  names(theta) <- c("t", names(lower))
   return(theta)
 }
 
