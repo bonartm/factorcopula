@@ -11,17 +11,14 @@
 #'
 #' @return a matrix or vector of parameters
 #' @export
-fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k, cl = NULL, trials = length(cl), load.balancing = TRUE) {
+fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k,
+                   cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE) {
 
   Yres <- apply(Y, 2, empDist)
   mHat <- moments(Yres, k)
 
   T <- nrow(Yres)
-  if (T <= 300){
-    stop("Number of observations is to small.")
-  }
 
-  tSeq <- 300:T
   N <- ncol(Yres)
   W <- diag(length(mHat))
 
@@ -34,6 +31,10 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
   snow::clusterExport(cl, ls(envir = environment()), environment())
 
   if (recursive){
+    if (T <= 300){
+      stop("Number of observations is to small.")
+    }
+    tSeq <- 300:T
     ## estimate some starting values by slicing the input into chunks of 500 observations
     t_start <- slice(1:nrow(Y), 500)
     cat("Recursive model estimation with", length(t_start), "starting value(s) and", length(tSeq), "time periods\n")

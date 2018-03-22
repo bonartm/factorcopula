@@ -11,6 +11,7 @@ cluster_library <- function(cl, packages){
   all(unlist(res))
 }
 
+
 parallelLapply <- function(x, fun, cl, load.balancing = TRUE, ...){
   if(is.null(cl)){
     lapply(x, fun, ...)
