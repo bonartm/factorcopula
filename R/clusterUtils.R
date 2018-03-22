@@ -11,10 +11,14 @@ cluster_library <- function(cl, packages){
   all(unlist(res))
 }
 
-parallelLapply <- function(x, fun, cl, ...){
+parallelLapply <- function(x, fun, cl, load.balancing = TRUE, ...){
   if(is.null(cl)){
     lapply(x, fun, ...)
   } else {
-    parLapply(cl, x, fun, ...)
+    if (load.balancing){
+      snow::clusterApplyLB(cl, x, fun, ...)
+    } else {
+      snow::clusterApply(cl, x, fun, ...)
+    }
   }
 }

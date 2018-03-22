@@ -11,7 +11,7 @@
 #'
 #' @return a matrix or vector of parameters
 #' @export
-fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k, cl, trials = length(cl)) {
+fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k, cl = NULL, trials = length(cl), load.balancing = TRUE) {
 
   Yres <- apply(Y, 2, empDist)
   mHat <- moments(Yres, k)
@@ -40,11 +40,11 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
 
     theta_start <- lapply(t_start, function(tValues){
       snow::clusterExport(cl, "t", environment())
-      start <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
+      start <- parallelLapply(x = 1:length(cl), fun = function(trial){
         mHat <- moments(Yres[tValues, ], k)
         theta <- runif(length(lower), lower, upper)
         model_estimate(theta = theta, mHat = mHat, fc_create(config_factor, config_error, config_beta))
-      })
+      }, cl = cl, load.balancing = load.balancing)
       start <- model_best(start)
       cat("Estimated starting value(s) from t =", min(tValues), "to t =", max(tValues), ":", round(start$par,4), "- Q:",round(start$value,4), "\n")
       start$par
@@ -52,12 +52,12 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
 
     snow::clusterExport(cl, c("theta_start"), environment())
 
-    result <- snow::clusterApplyLB(cl, tSeq, function(t){
+    result <- parallelLapply(x = tSeq, fun = function(t){
       models <- lapply(theta_start, model_estimate,
                        mHat = moments(Yres[1:t, ], k),
                        copFun = fc_create(config_factor, config_error, config_beta))
       model_best(models)
-    })
+    }, cl = cl, load.balancing = load.balancing)
 
     theta <- model_theta(result)
     theta$t <- tSeq
@@ -65,9 +65,9 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
   } else {
 
     cat("Full model estimation with",trials, "trials\n")
-    full <- snow::clusterApplyLB(cl, 1:trials, function(trial){
+    full <- parallelLapply(x = 1:trials, fun = function(trial){
       model_estimate(runif(length(lower), lower, upper), mHat, fc_create(config_factor, config_error, config_beta))
-    })
+    }, cl = cl, load.balancing = load.balancing)
     best <- model_best(full)
     theta <- c(best$par, best$value, best$convergence, T)
   }

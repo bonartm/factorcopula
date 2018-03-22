@@ -5,7 +5,7 @@
 \title{Fit a factor copula model}
 \usage{
 fc_fit(Y, config_factor, config_error, config_beta, lower, upper, recursive,
-  control, S, k, cl, trials = length(cl))
+  control, S, k, cl = NULL, trials = length(cl), load.balancing = TRUE)
 }
 \arguments{
 \item{Y}{A dataframe or matrix like object}
