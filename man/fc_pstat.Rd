@@ -7,7 +7,7 @@
 fc_pstat(theta, tSeq)
 }
 \arguments{
-\item{theta}{A matrix with max(tSeq) rows of recursive parameters}
+\item{theta}{A numeric matrix with max(tSeq) rows of recursive parameters}
 
 \item{tSeq}{A vector of positive integers}
 }

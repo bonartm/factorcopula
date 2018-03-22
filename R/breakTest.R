@@ -1,6 +1,6 @@
 #' Return the p statistics of a recursive factor copula model
 #'
-#' @param theta A matrix with max(tSeq) rows of recursive parameters
+#' @param theta A numeric matrix with max(tSeq) rows of recursive parameters
 #' @param tSeq A vector of positive integers
 #'
 #' @return for each entray in tSeq a P statistic
@@ -77,6 +77,36 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NU
     return(max(Kbt))
   }, cl = cl, T = T, tSeq = tSeq, Ydis = Ydis, k = k, leftPart = leftPart, type = type)
   return(unlist(Kb))
+}
+
+getGHat <- function(theta, copFun, eps, mHat, k, S){
+  P <- length(theta)
+  M <- length(mHat)
+
+  Gcol <- lapply(1:P, function(j){
+    step <- unitVector(P, j)*eps
+    ghatplus <- otim_g(mHat, copFun, theta + step, S, TRUE, k)
+    ghatminus <- optim_g(mHat, copFun, theta - step, S, TRUE, k)
+    (ghatplus-ghatminus)/(2*eps)
+  })
+  G <- do.call(cbind, Gcol)
+  stopifnot(nrow(G) == M & ncol(G) == P)
+  return(G)
+}
+
+getSigmaHat <- function(Y, B, k){
+  T <- nrow(Y)
+  Ydis <- apply(Y, 2, empDist)
+  sigmaB <- replicate(B, {
+    b <- sample(1:T, T, replace = TRUE)
+    mHatB <- moments(Ydis[b, ], k)
+  })
+  T*cov(t(sigmaB))
+}
+
+getOmegaHat <- function(G, W, sigma){
+  inv <- solve(t(G)%*%W%*%G)
+  inv%*%t(G)%*%W%*%sigma%*%W%*%G%*%inv
 }
 
 

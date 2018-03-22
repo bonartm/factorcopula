@@ -1,51 +1,3 @@
-getQVal <- function(gVal, W){
-  t(gVal)%*%W%*%gVal
-}
-
-getGVal <- function(mHat, copFun, theta, S, seed, k){
-  U <- copFun(theta, S, seed)
-  mTilde <- moments(U, k)
-  return(mHat - mTilde)
-}
-
-test <- function(a){
-  f <- function(){
-    a <<- a+1
-    return(a)
-  }
-}
-
-getGHat <- function(theta, copFun, eps, mHat, k, S){
-  P <- length(theta)
-  M <- length(mHat)
-
-  Gcol <- lapply(1:P, function(j){
-    step <- unitVector(P, j)*eps
-    ghatplus <- getGVal(mHat, copFun, theta + step, S, TRUE, k)
-    ghatminus <- getGVal(mHat, copFun, theta - step, S, TRUE, k)
-    (ghatplus-ghatminus)/(2*eps)
-  })
-  G <- do.call(cbind, Gcol)
-  stopifnot(nrow(G) == M & ncol(G) == P)
-  return(G)
-}
-
-getSigmaHat <- function(Y, B, k){
-  T <- nrow(Y)
-  Ydis <- apply(Y, 2, empDist)
-  sigmaB <- replicate(B, {
-    b <- sample(1:T, T, replace = TRUE)
-    mHatB <- moments(Ydis[b, ], k)
-  })
-  T*cov(t(sigmaB))
-}
-
-getOmegaHat <- function(G, W, sigma){
-  inv <- solve(t(G)%*%W%*%G)
-  inv%*%t(G)%*%W%*%sigma%*%W%*%G%*%inv
-}
-
-
 #' Fit a factor copula model
 #'
 #' @param Y A dataframe or matrix like object
@@ -59,7 +11,7 @@ getOmegaHat <- function(G, W, sigma){
 #'
 #' @return a matrix or vector of parameters
 #' @export
-fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k, cl) {
+fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k, cl, trials = length(cl)) {
 
   Yres <- apply(Y, 2, empDist)
   mHat <- moments(Yres, k)
@@ -75,26 +27,26 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
 
   opti <- function(theta, mHat, copFun, seed){
     names(theta) <- names(lower)
-    gVal <-getGVal(mHat, copFun, theta, S, seed, k)
-    as.vector(getQVal(gVal, W))
+    gVal <-optim_g(mHat, copFun, theta, S, seed, k)
+    as.vector(optim_q(gVal, W))
   }
 
   snow::clusterExport(cl, ls(envir = environment()), environment())
 
   if (recursive){
     ## estimate some starting values by slicing the input into chunks of 500 observations
-    t_start <- slice(1:T, 500)
+    t_start <- slice(1:nrow(Y), 500)
     cat("Recursive model estimation with", length(t_start), "starting value(s) and", length(tSeq), "time periods\n")
 
-    theta_start <- lapply(t_start, function(t){
+    theta_start <- lapply(t_start, function(tValues){
       snow::clusterExport(cl, "t", environment())
       start <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
-        mHat <- moments(Yres[t, ], k)
+        mHat <- moments(Yres[tValues, ], k)
         theta <- runif(length(lower), lower, upper)
         model_estimate(theta = theta, mHat = mHat, fc_create(config_factor, config_error, config_beta))
       })
       start <- model_best(start)
-      cat("Estimated starting value(s) from t =", min(t), "to t =", max(t), ":", round(start$par,4), "- Q:",round(start$value,4), "\n")
+      cat("Estimated starting value(s) from t =", min(tValues), "to t =", max(tValues), ":", round(start$par,4), "- Q:",round(start$value,4), "\n")
       start$par
     })
 
@@ -112,8 +64,8 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
 
   } else {
 
-    cat("Full model estimation with",length(cl), "trials\n")
-    full <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
+    cat("Full model estimation with",trials, "trials\n")
+    full <- snow::clusterApplyLB(cl, 1:trials, function(trial){
       model_estimate(runif(length(lower), lower, upper), mHat, fc_create(config_factor, config_error, config_beta))
     })
     best <- model_best(full)
@@ -145,6 +97,16 @@ model_estimate <- function(theta, mHat, copFun){
   seed <- random_seed()
   nloptr::sbplx(x0 = theta, fn = opti, lower = lower, upper = upper,
                 control = control, mHat = mHat, copFun = copFun, seed = seed)
+}
+
+optim_q <- function(gVal, W){
+  t(gVal)%*%W%*%gVal
+}
+
+optim_g <- function(mHat, copFun, theta, S, seed, k){
+  U <- copFun(theta, S, seed)
+  mTilde <- moments(U, k)
+  return(mHat - mTilde)
 }
 
 
