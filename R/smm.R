@@ -68,6 +68,7 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
   if (T <= 300){
     stop("Number of observations is to small.")
   }
+
   tSeq <- 300:T
   N <- ncol(Yres)
   W <- diag(length(mHat))
@@ -78,33 +79,45 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
     as.vector(getQVal(gVal, W))
   }
 
-  if (recursive){
-    cat("Recursive model estimation\n")
-    snow::clusterExport(cl, ls(envir = environment()), environment())
-    start <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
-      seed <- random_seed()
-      copFun <- fc_create(config_factor, config_error, config_beta)
-      theta0 <- runif(length(lower), lower, upper)
-      names(theta0) <- names(lower)
-      nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
-                    control = control, mHat = moments(Yres[1:min(tSeq), ], k), copFun = copFun, seed = seed)
-    })
-    start <- model_best(start)
-    names(start$theta) <- names(lower)
+  snow::clusterExport(cl, ls(envir = environment()), environment())
 
-    cat("Estimated starting value(s):", start$theta, "- Q:",start$Q, "\n")
-    snow::clusterExport(cl, list("start"), environment())
+  if (recursive){
+    ## estimate some starting values by slicing the input into chunks of 500 observations
+
+    t_start <- slice(1:T, 500)
+
+    theta_start <- lapply(t_start, function(t){
+      start <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
+        seed <- random_seed()
+        copFun <- fc_create(config_factor, config_error, config_beta)
+        theta0 <- runif(length(lower), lower, upper)
+        names(theta0) <- names(lower)
+        nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
+                      control = control, mHat = moments(Yres[t, ], k), copFun = copFun, seed = seed)
+      })
+      start <- model_best(start)
+      cat("Estimated starting value(s) from t =", min(t), "to t =", max(t), ":", round(start$par,4), "- Q:",round(start$value,4), "\n")
+      start$par
+    })
+
+    snow::clusterExport(cl, c("theta_start"), environment())
 
     result <- snow::clusterApplyLB(cl, tSeq, function(t){
-      seed <- random_seed()
-      copFun <- fc_create(config_factor, config_error, config_beta)
-      nloptr::sbplx(x0 = start$theta, fn = opti, lower = lower, upper = upper,
-                    control = control, mHat = moments(Yres[1:t, ], k), copFun = copFun, seed = seed)
+      models <- lapply(theta_start, function(theta){
+        seed <- random_seed()
+        copFun <- fc_create(config_factor, config_error, config_beta)
+        names(theta) <- names(lower)
+        nloptr::sbplx(x0 = theta, fn = opti, lower = lower, upper = upper,
+                      control = control, mHat = moments(Yres[1:t, ], k), copFun = copFun, seed = seed)
+      })
+      model_best(models)
     })
-    theta <- data.frame(t = tSeq, model_theta(result))
+
+    theta <- model_theta(result)
+    theta$t <- tSeq
+
   } else {
     cat("Full model estimation with",length(cl), "trials\n")
-    snow::clusterExport(cl, ls(envir = environment()), environment())
 
     full <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
       seed <- random_seed()
@@ -114,30 +127,39 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
       nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
                     control = control, mHat = mHat, copFun = copFun, seed = seed)
     })
-
-    theta <- model_theta(full)
-    for (i in 1:nrow(theta)){
-      cat(i, "Estimated value(s):", theta[i, ], "\n")
-    }
     best <- model_best(full)
-    cat("Best model value(s):", best$theta, "- Q:",best$Q, "\n")
-    theta <- data.frame(t = T, best$theta)
+    cat("Best model value(s):", round(best$par, 4), "- Q:", round(best$value, 4), "\n")
+    theta <- round(c(best$par, best$value, best$convergence, T), 4)
   }
-  names(theta) <- c("t", names(lower))
+
+  names(theta) <- c(names(lower), "Q", "convergence", "t")
   return(theta)
 }
 
+
 model_theta <- function(models){
-  do.call(rbind, lapply(models, function(x) round(x$par,4)))
+  data.frame(do.call(rbind, lapply(models, function(x) c(x$par, x$value, x$convergence))))
 }
 
 model_best <- function(models){
-  theta <- model_theta(models)
-  Qval <- vapply(models, function(x) round(x$value,4), numeric(1))
-  list(theta = theta[which.min(Qval), , drop = FALSE], Q = Qval[which.min(Qval)])
+  Qval <- vapply(models, function(x) x$value, numeric(1))
+  models[[which.min(Qval)]]
 }
 
 random_seed <- function(){
   max <- .Machine$integer.max
   runif(1, -max, max)
 }
+
+slice <- function(x, n) split(x, as.integer((seq_along(x) - 1) / n))
+
+# model_estimate <- function(cl, trials, theta0, from, to){
+#   snow::clusterApplyLB(cl, 1:trials, function(trial){
+#     seed <- random_seed()
+#     copFun <- fc_create(config_factor, config_error, config_beta)
+#     nloptr::sbplx(x0 = theta0[[trial]], fn = opti, lower = lower, upper = upper,
+#                   control = control, mHat = moments(Yres[from:to, ], k), copFun = copFun, seed = seed)
+#   })
+# }
+
+
