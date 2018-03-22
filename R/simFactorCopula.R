@@ -72,33 +72,39 @@ fc_create <- function(factor, error, beta){
   Z <- length(factor$spec)
   stopifnot(ncol(beta) == Z, is.matrix(beta))
 
-  state <- list(theta = -99, S = -99, fixed = FALSE, zMat = matrix(-99), epsMat = matrix(-99))
+  state <- list(theta = -99, S = -99, zMat = matrix(-99), epsMat = matrix(-99), seed = NULL)
 
-  function(theta, S, fixed = FALSE){
-      if(state_changed(state, theta, S, fixed, factor$par))
-        zMat <- fc_sim(factor$spec, S, theta)
-      else
-        zMat <- state$zMat
 
-      if(state_changed(state, theta, S, fixed, error$par)){
-        epsMat <- fc_sim(error$spec, S*N, theta)
-        epsMat <- matrix(epsMat, ncol = N)
-      } else
-        epsMat <- state$epsMat
-
-      betaMat <- eval_beta(beta, theta)
-      state <<- list(theta = theta, S = S, fixed = fixed, zMat = zMat, epsMat = epsMat)
-      X <- zMat%*%t(betaMat) + epsMat
-      apply(X, 2, empDist)
+  function(theta, S, seed = NULL){
+    set.seed(seed)
+    if(state_changed(state, theta, S, factor$par, seed)){
+      #cat("sim new Z values\n")
+      zMat <- fc_sim(factor$spec, S, theta)
+    } else{
+      zMat <- state$zMat
     }
+
+    if(state_changed(state, theta, S, error$par, seed)){
+      #cat("sim new error values\n")
+      epsMat <- fc_sim(error$spec, S*N, theta)
+      epsMat <- matrix(epsMat, ncol = N)
+    } else {
+      epsMat <- state$epsMat
+    }
+
+    betaMat <- eval_beta(beta, theta)
+    state <<- list(theta = theta, S = S, seed = seed, zMat = zMat, epsMat = epsMat)
+    X <- zMat%*%t(betaMat) + epsMat
+    apply(X, 2, empDist)
+  }
 }
 
 
-state_changed <- function(state, theta, S, fixed, parnames){
-  if (!fixed)
+state_changed <- function(state, theta, S, parnames, seed){
+  if (is.null(seed)|(is.null(state$seed) & !is.null(seed)))
     res <- TRUE
   else {
-    res <- any(state$S != S, length(parnames) != 0, state$theta[parnames] != theta[parnames])
+    res <- any(seed != state$seed, state$S != S, length(parnames) != 0 && state$theta[parnames] != theta[parnames])
   }
   return(res)
 }

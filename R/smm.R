@@ -2,10 +2,17 @@ getQVal <- function(gVal, W){
   t(gVal)%*%W%*%gVal
 }
 
-getGVal <- function(mHat, copFun, theta, S, fixed, k){
-  U <- copFun(theta, S, fixed)
+getGVal <- function(mHat, copFun, theta, S, seed, k){
+  U <- copFun(theta, S, seed)
   mTilde <- moments(U, k)
   return(mHat - mTilde)
+}
+
+test <- function(a){
+  f <- function(){
+    a <<- a+1
+    return(a)
+  }
 }
 
 getGHat <- function(theta, copFun, eps, mHat, k, S){
@@ -52,7 +59,7 @@ getOmegaHat <- function(G, W, sigma){
 #'
 #' @return a matrix or vector of parameters
 #' @export
-fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
+fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k, cl) {
 
   Yres <- apply(Y, 2, empDist)
   mHat <- moments(Yres, k)
@@ -65,9 +72,9 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
   N <- ncol(Yres)
   W <- diag(length(mHat))
 
-  opti <- function(theta, mHat){
+  opti <- function(theta, mHat, copFun, seed){
     names(theta) <- names(lower)
-    gVal <-getGVal(mHat, copFun, theta, S, TRUE, k)
+    gVal <-getGVal(mHat, copFun, theta, S, seed, k)
     as.vector(getQVal(gVal, W))
   }
 
@@ -75,10 +82,12 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
     cat("Recursive model estimation\n")
     snow::clusterExport(cl, ls(envir = environment()), environment())
     start <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
+      seed <- random_seed()
+      copFun <- fc_create(config_factor, config_error, config_beta)
       theta0 <- runif(length(lower), lower, upper)
       names(theta0) <- names(lower)
       nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
-                    control = control, mHat = moments(Yres[1:min(tSeq), ], k))
+                    control = control, mHat = moments(Yres[1:min(tSeq), ], k), copFun = copFun, seed = seed)
     })
     start <- model_best(start)
     names(start$theta) <- names(lower)
@@ -87,8 +96,10 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
     snow::clusterExport(cl, list("start"), environment())
 
     result <- snow::clusterApplyLB(cl, tSeq, function(t){
+      seed <- random_seed()
+      copFun <- fc_create(config_factor, config_error, config_beta)
       nloptr::sbplx(x0 = start$theta, fn = opti, lower = lower, upper = upper,
-                    control = control, mHat = moments(Yres[1:t, ], k))
+                    control = control, mHat = moments(Yres[1:t, ], k), copFun = copFun, seed = seed)
     })
     theta <- data.frame(t = tSeq, model_theta(result))
   } else {
@@ -96,11 +107,14 @@ fc_fit <- function(Y, copFun, lower, upper, recursive, control, S, k, cl) {
     snow::clusterExport(cl, ls(envir = environment()), environment())
 
     full <- snow::clusterApplyLB(cl, 1:length(cl), function(trial){
+      seed <- random_seed()
+      copFun <- fc_create(config_factor, config_error, config_beta)
       theta0 <- runif(length(lower), lower, upper)
       names(theta0) <- names(lower)
       nloptr::sbplx(x0 = theta0, fn = opti, lower = lower, upper = upper,
-                    control = control, mHat = mHat)
+                    control = control, mHat = mHat, copFun = copFun, seed = seed)
     })
+
     theta <- model_theta(full)
     for (i in 1:nrow(theta)){
       cat(i, "Estimated value(s):", theta[i, ], "\n")
@@ -121,4 +135,9 @@ model_best <- function(models){
   theta <- model_theta(models)
   Qval <- vapply(models, function(x) round(x$value,4), numeric(1))
   list(theta = theta[which.min(Qval), , drop = FALSE], Q = Qval[which.min(Qval)])
+}
+
+random_seed <- function(){
+  max <- .Machine$integer.max
+  runif(1, -max, max)
 }

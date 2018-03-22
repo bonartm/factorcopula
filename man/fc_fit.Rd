@@ -4,12 +4,11 @@
 \alias{fc_fit}
 \title{Fit a factor copula model}
 \usage{
-fc_fit(Y, copFun, lower, upper, recursive, control, S, k, cl)
+fc_fit(Y, config_factor, config_error, config_beta, lower, upper, recursive,
+  control, S, k, cl)
 }
 \arguments{
 \item{Y}{A dataframe or matrix like object}
-
-\item{copFun}{A copula function estimated by @references factorCopula}
 
 \item{lower}{Lower bound for optimazation: Named vector with parameters}
 
@@ -22,6 +21,8 @@ fc_fit(Y, copFun, lower, upper, recursive, control, S, k, cl)
 \item{S}{The number of simulations to use}
 
 \item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
+
+\item{copFun}{A copula function estimated by @references factorCopula}
 }
 \value{
 a matrix or vector of parameters
