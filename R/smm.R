@@ -14,6 +14,13 @@
 fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k,
                    cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE) {
 
+  model_estimate <- function(theta, mHat){
+    seed <- random_seed()
+    copFun <- fc_create(config_factor, config_error, config_beta)
+    nloptr::sbplx(x0 = theta, fn = opti, lower = lower, upper = upper,
+                  control = control, mHat = mHat, copFun = copFun, seed = seed)
+  }
+
   Yres <- apply(Y, 2, empDist)
   mHat <- moments(Yres, k)
 
@@ -28,7 +35,9 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
     as.vector(optim_q(gVal, W))
   }
 
-  snow::clusterExport(cl, ls(envir = environment()), environment())
+  if(!is.null(cl)){
+    snow::clusterExport(cl, ls(envir = environment()), environment())
+  }
 
   if (recursive){
     if (T <= 300){
@@ -40,23 +49,27 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
     cat("Recursive model estimation with", length(t_start), "starting value(s) and", length(tSeq), "time periods\n")
 
     theta_start <- lapply(t_start, function(tValues){
-      snow::clusterExport(cl, "t", environment())
+      if(!is.null(cl)){
+        snow::clusterExport(cl, "t", environment())
+
+      }
       start <- parallelLapply(x = 1:length(cl), fun = function(trial){
         mHat <- moments(Yres[tValues, ], k)
         theta <- runif(length(lower), lower, upper)
-        model_estimate(theta = theta, mHat = mHat, fc_create(config_factor, config_error, config_beta))
+        model_estimate(theta = theta, mHat = mHat)
       }, cl = cl, load.balancing = load.balancing)
       start <- model_best(start)
       cat("Estimated starting value(s) from t =", min(tValues), "to t =", max(tValues), ":", round(start$par,4), "- Q:",round(start$value,4), "\n")
       start$par
     })
 
-    snow::clusterExport(cl, c("theta_start"), environment())
+    if(!is.null(cl)){
+      snow::clusterExport(cl, c("theta_start"), environment())
+    }
 
     result <- parallelLapply(x = tSeq, fun = function(t){
       models <- lapply(theta_start, model_estimate,
-                       mHat = moments(Yres[1:t, ], k),
-                       copFun = fc_create(config_factor, config_error, config_beta))
+                       mHat = moments(Yres[1:t, ], k))
       model_best(models)
     }, cl = cl, load.balancing = load.balancing)
 
@@ -67,14 +80,14 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
 
     cat("Full model estimation with",trials, "trials\n")
     full <- parallelLapply(x = 1:trials, fun = function(trial){
-      model_estimate(runif(length(lower), lower, upper), mHat, fc_create(config_factor, config_error, config_beta))
+      model_estimate(runif(length(lower), lower, upper), mHat)
     }, cl = cl, load.balancing = load.balancing)
     best <- model_best(full)
     theta <- c(best$par, best$value, best$convergence, T)
   }
 
   names(theta) <- c(names(lower), "Q", "convergence", "t")
-  return(theta)
+  return(round(theta, 4))
 }
 
 
@@ -93,12 +106,6 @@ random_seed <- function(){
 }
 
 slice <- function(x, n) split(x, as.integer((seq_along(x) - 1) / n))
-
-model_estimate <- function(theta, mHat, copFun){
-  seed <- random_seed()
-  nloptr::sbplx(x0 = theta, fn = opti, lower = lower, upper = upper,
-                control = control, mHat = mHat, copFun = copFun, seed = seed)
-}
 
 optim_q <- function(gVal, W){
   t(gVal)%*%W%*%gVal
