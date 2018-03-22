@@ -34,11 +34,11 @@ tSeq <- 300:nrow(Y)
 
 cl <- makeCluster(4)
 cluster_library(cl, "factorcopula")
-res <- fc_fit(Y = Y[1:1000, ], Z, eps, beta, lower = lower, upper = upper, k = k, recursive = TRUE,
+res <- fc_fit(Y = Y[1:1000, ], Z, eps, beta, lower = lower, upper = upper, k = k, recursive = FALSE,
             control = list(stopval = 0, xtol_rel = 1e-5, maxeval = 1000), S = 2500, cl = cl)
 stopCluster(cl)
 
-opt <- cheops_slurmcontrol(nodes = 60, tasks = 1, mem = "2gb", time = "01:00:00")
+opt <- cheops_slurmcontrol(nodes = 60, tasks = 1, mem = "2gb", time = "02:00:00")
 job <- cheops_run(fc_fit, opt, "re-test2",
            args = list(Y = Y, config_factor = Z, config_error = eps, config_beta = beta,
                        lower = lower, upper = upper, k = k, recursive = TRUE,
@@ -49,12 +49,9 @@ cat(cheops_getlog("re-test2"), sep = "\n")
 #cheops_cancel("rec-test")
 res <- cheops_readRDS('./re-test2/res.rds')
 res$p <- fc_pstat(res[,-1], res$t)
-
+res$m <- fc_mstat(Y, tSeq, k)
 
 ggplot(res, aes(x = t, y = p)) +
   geom_line() +
   geom_smooth()
 
-m <- fc_mstat(Y, tSeq, k)
-plot(tSeq, m, type = "l")
-abline(v = brk)
