@@ -38,7 +38,8 @@ fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL){
 #' Simulate critival values for either the copula or the moments based break test
 #'
 #' @export
-fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NULL, theta = NULL, cl = NULL){
+fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k,
+                       config_factor = NULL, config_error = NULL, config_beta = NULL, theta = NULL, cl = NULL){
   #resY: matrix of standardized residuals from empirical data Y
   #B: number of bootstrap samples
   #moments: function which generates a vector of dependence measures
@@ -48,7 +49,10 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NU
   T <- nrow(Y)
 
   if (type %in% c("both", "copula")){
-    seed <- runif(1, min = 1, max = .Machine$integer.max)
+    stopifnot(!is.null(config_factor) & !is.null(config_error) & !is.null(config_beta))
+    copFun <- fc_create(config_factor, config_error, config_beta)
+    theta <- unlist(c(theta))
+    seed <- random_seed()
     G <- getGHat(theta, copFun, 0.1, mHat, k, S = 25000, seed)
     W <- diag(length(mHat))
     leftPart <- solve(t(G)%*%W%*%G)%*%t(G)%*%W
@@ -75,18 +79,18 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NU
     }, numeric(1))
 
     return(max(Kbt))
-  }, cl = cl, T = T, tSeq = tSeq, Ydis = Ydis, k = k, leftPart = leftPart, type = type)
+  }, cl = cl, T = T, tSeq = tSeq, Ydis = Ydis, k = k, leftPart = leftPart, type = type, load.balancing = FALSE)
   return(unlist(Kb))
 }
 
-getGHat <- function(theta, copFun, eps, mHat, k, S){
+getGHat <- function(theta, copFun, eps, mHat, k, S, seed){
   P <- length(theta)
   M <- length(mHat)
 
   Gcol <- lapply(1:P, function(j){
     step <- unitVector(P, j)*eps
-    ghatplus <- otim_g(mHat, copFun, theta + step, S, TRUE, k)
-    ghatminus <- optim_g(mHat, copFun, theta - step, S, TRUE, k)
+    ghatplus <- optim_g(mHat, copFun, theta + step, S, seed, k)
+    ghatminus <- optim_g(mHat, copFun, theta - step, S, seed, k)
     (ghatplus-ghatminus)/(2*eps)
   })
   G <- do.call(cbind, Gcol)

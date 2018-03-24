@@ -78,7 +78,7 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
 
   } else {
 
-    cat("Full model estimation with",trials, "trials\n")
+    cat("Full model estimation with",trials, "trial(s)\n")
     full <- parallelLapply(x = 1:trials, fun = function(trial){
       model_estimate(runif(length(lower), lower, upper), mHat)
     }, cl = cl, load.balancing = load.balancing)
