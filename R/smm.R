@@ -1,22 +1,26 @@
 #' Fit a factor copula model
 #'
 #' @param Y A dataframe or matrix like object
-#' @param copFun A copula function estimated by @references factorCopula
-#' @param k A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)
-#' @param S The number of simulations to use
+#' @param factor specification of latent variables, see \link[factorcopula]{config_factor}
+#' @param error specification of error term, see \link[factorcopula]{config_error}
+#' @param beta specification of parameter matrix, see \link[factorcopula]{config_beta}
 #' @param lower Lower bound for optimazation: Named vector with parameters
 #' @param upper Upper bound for optimazation: Named vector with parameters
-#' @param recursive Wether to estimate recursive or just full model
-#' @param control named list of arguments passed to the Subplex Algorithm (see nl.opts for help)
-#'
-#' @return a matrix or vector of parameters
+#' @param recursive Wether to estimate recursive or full model
+#' @param control named list of arguments passed to the subplex algorithm, see \link[nloptr]{nl.opts}
+#' @param S The number of simulations to use
+#' @param k A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)
+#' @param cl A cluster object, see \link[snow]{makeCluster}
+#' @param trials number of model runs with different starting values
+#' @param load.balancing if TRUE a load balancing cluster apply is performed
+#' @return if recursive a data.frame, else a vector of parameters and model statistics
 #' @export
-fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, recursive, control, S, k,
+fc_fit <- function(Y, factor, error, beta, lower, upper, recursive, control, S, k,
                    cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE) {
 
   model_estimate <- function(theta, mHat){
     seed <- random_seed()
-    copFun <- fc_create(config_factor, config_error, config_beta)
+    copFun <- fc_create(factor, error, beta)
     nloptr::sbplx(x0 = theta, fn = opti, lower = lower, upper = upper,
                   control = control, mHat = mHat, copFun = copFun, seed = seed)
   }
@@ -55,7 +59,7 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
       }
       start <- parallelLapply(x = 1:length(cl), fun = function(trial){
         mHat <- moments(Yres[tValues, ], k)
-        theta <- runif(length(lower), lower, upper)
+        theta <- stats::runif(length(lower), lower, upper)
         model_estimate(theta = theta, mHat = mHat)
       }, cl = cl, load.balancing = load.balancing)
       start <- model_best(start)
@@ -80,7 +84,7 @@ fc_fit <- function(Y, config_factor, config_error, config_beta, lower, upper, re
 
     cat("Full model estimation with",trials, "trial(s)\n")
     full <- parallelLapply(x = 1:trials, fun = function(trial){
-      model_estimate(runif(length(lower), lower, upper), mHat)
+      model_estimate(stats::runif(length(lower), lower, upper), mHat)
     }, cl = cl, load.balancing = load.balancing)
     best <- model_best(full)
     theta <- c(best$par, best$value, best$convergence, T)
@@ -102,7 +106,7 @@ model_best <- function(models){
 
 random_seed <- function(){
   max <- .Machine$integer.max
-  runif(1, -max, max)
+  stats::runif(1, -max, max)
 }
 
 slice <- function(x, n) split(x, as.integer((seq_along(x) - 1) / n))

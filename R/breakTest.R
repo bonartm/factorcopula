@@ -3,7 +3,7 @@
 #' @param theta A numeric matrix with max(tSeq) rows of recursive parameters
 #' @param tSeq A vector of positive integers
 #'
-#' @return for each entray in tSeq a P statistic
+#' @return a vector of P statistics for each t
 #' @export
 fc_pstat <- function(theta, tSeq){
   stopifnot(!is.null(dim(theta)))
@@ -21,9 +21,13 @@ fc_pstat <- function(theta, tSeq){
 }
 
 #' Calculate recursive test statistics for the moments based break test
+#' @param Y matrix of observed values
+#' @param tSeq A vector of positive integers
+#' @param k a vector defining the groups of the variables
+#' @param cl a cluster object, see \link[snow]{makeCluster}
 #'
 #' @export
-fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL){
+fc_mstat <- function(Y, tSeq, k, cl = NULL){
   Ydis <- apply(Y, 2, empDist)
   mFull <- moments(Ydis, k)
   T <- nrow(Y)
@@ -36,10 +40,20 @@ fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL){
 
 
 #' Simulate critival values for either the copula or the moments based break test
+#' @param type either moments or copula
+#' @param Y a numeric matrix of observed values
+#' @param B the number of bootstrap replications
+#' @param tSeq a sequence with positive integers
+#' @param k a vector defining the groups of the variables
+#' @param factor specification of latent variables, see \link[factorcopula]{config_factor}
+#' @param error specification of error term, see \link[factorcopula]{config_error}
+#' @param beta specification of parameter matrix, see \link[factorcopula]{config_beta}
+#' @param theta named vector of full model parameter estimates
+#' @param cl an optional cluster object, see \link[snow]{makeCluster}
 #'
 #' @export
 fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k,
-                       config_factor = NULL, config_error = NULL, config_beta = NULL, theta = NULL, cl = NULL){
+                       factor = NULL, error = NULL, beta = NULL, theta = NULL, cl = NULL){
   #resY: matrix of standardized residuals from empirical data Y
   #B: number of bootstrap samples
   #moments: function which generates a vector of dependence measures
@@ -105,12 +119,18 @@ getSigmaHat <- function(Y, B, k){
     b <- sample(1:T, T, replace = TRUE)
     mHatB <- moments(Ydis[b, ], k)
   })
-  T*cov(t(sigmaB))
+  T*stats::cov(t(sigmaB))
 }
 
 getOmegaHat <- function(G, W, sigma){
   inv <- solve(t(G)%*%W%*%G)
   inv%*%t(G)%*%W%*%sigma%*%W%*%G%*%inv
+}
+
+unitVector <- function(size, k){
+  vec <- rep(0, size)
+  vec[k] <- 1
+  return(vec)
 }
 
 

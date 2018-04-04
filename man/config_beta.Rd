@@ -10,11 +10,9 @@ config_beta(k, Z = NULL)
 \item{k}{Numeric vector of length N with eventually positive increasing integers from 1 to N.}
 
 \item{Z}{Number of latent variables}
-
-\item{type}{Either unrestrictibe, equidependence or bloc-equidependence}
 }
 \value{
-A character matrix of parameters which can be used in \link[factorcopula]{fc_create}
+A character matrix of parameters to be used in \link[factorcopula]{fc_create} or \link[factorcopula]{fc_fit}
 }
 \description{
 Configurate the loadings of a factorcopula model

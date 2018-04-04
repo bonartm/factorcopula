@@ -4,7 +4,7 @@
 #' a valid random number generators, the expressions have to be lists of named unquoted arguments.#'
 #' @param par a character vector of parameter names used in the specification of the factor matrix
 #'
-#' @return A list of \link[rlang]{quosure}s
+#' @return A list of \link[rlang]{quosure}s to be used in \link[factorcopula]{fc_create} or \link[factorcopula]{fc_fit}
 #' @export
 config_factor <- function(..., par = c()){
   factorspec <- rlang::exprs(...)
@@ -16,8 +16,9 @@ config_factor <- function(..., par = c()){
 #'
 #' @param ... One named expresssion. The name has to be a
 #' valid random number generator, the expression has to be a list of named unquoted arguments.
+#' @param par a character vector of parameter names used in the specification of the factor matrix
 #'
-#' @return A list of \link[rlang]{quosure}s
+#' @return A list of \link[rlang]{quosure}s to be used in \link[factorcopula]{fc_create} or \link[factorcopula]{fc_fit}
 #' @export
 config_error <- function(..., par = c()){
   if (length(rlang::exprs(...)) > 1)
@@ -27,11 +28,10 @@ config_error <- function(..., par = c()){
 
 #' Configurate the loadings of a factorcopula model
 #'
-#' @param type Either unrestrictibe, equidependence or bloc-equidependence
 #' @param k Numeric vector of length N with eventually positive increasing integers from 1 to N.
 #' @param Z Number of latent variables
 #'
-#' @return A character matrix of parameters which can be used in \link[factorcopula]{fc_create}
+#' @return A character matrix of parameters to be used in \link[factorcopula]{fc_create} or \link[factorcopula]{fc_fit}
 #' @export
 config_beta <- function(k, Z = NULL){
   M <- max(k)
@@ -57,11 +57,11 @@ config_beta <- function(k, Z = NULL){
 
 #' Simulate values from a factor copula model
 #'
-#' @param beta a character matrix of size [NxK] indicating the names and position of the beta parameters as character strings
 #' @param factor a configuration specified by \link[factorcopula]{config_factor}
-#' @param eps a configuation specified by \link[factorcopula]{config_error}
+#' @param error a configuation specified by \link[factorcopula]{config_error}
+#' @param beta a parameter matrix of factor loadings specified by \link[factorcopula]{config_beta}
 #'
-#' @return a function which can be used to simulate values from a factor copula model. It has the parameters theta, S and seed
+#' @return a function which can be used to simulate values from a factor copula model. It has the parameters theta, S and seed.
 #' @export
 fc_create <- function(factor, error, beta){
   force(factor)
@@ -109,21 +109,6 @@ state_changed <- function(state, theta, S, parnames, seed){
   return(res)
 }
 
-# rand_restore <- function(fun, ...){
-#   if (exists(".Random.seed", .GlobalEnv))
-#     oldseed <- .GlobalEnv$.Random.seed
-#   else
-#     oldseed <- NULL
-#
-#   res <- fun(...)
-#
-#   if (!is.null(oldseed))
-#     .GlobalEnv$.Random.seed <- oldseed
-#   else
-#     rm(".Random.seed", envir = .GlobalEnv)
-#   return(res)
-# }
-
 fc_sim <- function(config, S, theta){
   vapply(names(config), function(funName) {
     args <- config[[funName]]
@@ -148,15 +133,17 @@ fc_check <- function(names){
   }
 }
 
-# config_fixed <- function(spec){
-#   for (sp in spec){
-#     catch <- try(rlang::eval_bare(sp), silent = TRUE)
-#     if (class(catch) == "try-error"){
-#       return(FALSE)
-#     }
-#   }
-#   return(TRUE)
-# }
+genBetaParMat <- function(k){
+  kTab <- table(k)
+  M <- max(k)
+  first <- rep(paste0("beta", 1:M), times = kTab)
+  last <- lapply(1:M, function(m){
+    if (m == 1) timesLow <- 0 else timesLow <- sum(kTab[1:m-1])
+    if (m == M) timesUp <- 0 else timesUp <- sum(kTab[(m+1):M])
+    c(rep(0, timesLow), rep(paste0("beta", m+M), kTab[m]), rep(0, timesUp))
+  })
+  cbind(first, do.call(cbind, last))
+}
 
 
 

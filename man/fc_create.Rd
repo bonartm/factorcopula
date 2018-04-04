@@ -9,12 +9,12 @@ fc_create(factor, error, beta)
 \arguments{
 \item{factor}{a configuration specified by \link[factorcopula]{config_factor}}
 
-\item{beta}{a character matrix of size [NxK] indicating the names and position of the beta parameters as character strings}
+\item{error}{a configuation specified by \link[factorcopula]{config_error}}
 
-\item{eps}{a configuation specified by \link[factorcopula]{config_error}}
+\item{beta}{a parameter matrix of factor loadings specified by \link[factorcopula]{config_beta}}
 }
 \value{
-a function which can be used to simulate values from a factor copula model. It has the parameters theta, S and seed
+a function which can be used to simulate values from a factor copula model. It has the parameters theta, S and seed.
 }
 \description{
 Simulate values from a factor copula model

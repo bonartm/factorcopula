@@ -13,7 +13,7 @@ a valid random number generators, the expressions have to be lists of named unqu
 \item{par}{a character vector of parameter names used in the specification of the factor matrix}
 }
 \value{
-A list of \link[rlang]{quosure}s
+A list of \link[rlang]{quosure}s to be used in \link[factorcopula]{fc_create} or \link[factorcopula]{fc_fit}
 }
 \description{
 Configurate the latent variables of a factorcopula model

@@ -24,11 +24,11 @@ library(factorcopula)
 t <- 1500
 k <- c(1, 1) # all variables in the same groups for an equidependence model
 beta <- config_beta(k = k, Z = 1)
-Z <- config_factor(rst = list(nu = 1/nuInv, lambda = lambda), par = c("nuInv", "lambda"))
-eps <- config_error(rt = list(df = 1/nuInv), par = c("nuInv"))
+Z <- config_factor(rst = list(nu = 1/0.25, lambda = lambda), par = c("lambda"))
+eps <- config_error(rt = list(df = 1/0.25))
 
 # define the vector of true parameters
-theta0 <- c(beta1 = 2, nuInv = 0.25, lambda = -0.8)
+theta0 <- c(beta1 = 1.5, lambda = -0.8)
 
 # generate the copula function and simulate values from the copua model
 cop <- fc_create(Z, eps, beta)
@@ -39,14 +39,16 @@ U <- cop(theta0, t)
 Y <- qnorm(U)
 
 # define boundaries for optimzation
-lower <- c(0, 0.01, -0.99)
-upper <- c(5, 0.49, 0.99)
-names(lower) <- names(theta0)
-names(upper) <- names(theta0)
+lower <- c(beta1 = 0, lambda = -0.99)
+upper <- c(beta1 = 5, lambda =  0.99)
 
-# fit the copula and plot real together with simulated values
-m <- fc_fit(Y, cop, lower = lower, upper = upper, method = "subplex",
-         control = list(stopval = 0, xtol_rel = 1e-9, maxeval = 3000), trials = 4, S = 10000, k = k)
+
+# fit the copula and plot observed and simulated values
+cl <- parallel::makeCluster(parallel::detectCores())
+m <- fc_fit(Y, Z, eps, beta, lower, upper, 
+recursive = FALSE, control = list(stopval = 0, xtol_rel = 1e-9, maxeval = 3000), k = k, S = 25000, trials = 4, cl = cl)
+parallel::stopCluster(cl)
+
 plot(Y, pch = 20)
-points(qnorm(cop(m$best, 2000)), col = "red", pch = 20)
+points(qnorm(cop(m[1:2], 2000)), col = "red", pch = 20)
 ````

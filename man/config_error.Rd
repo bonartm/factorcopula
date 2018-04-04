@@ -9,9 +9,11 @@ config_error(..., par = c())
 \arguments{
 \item{...}{One named expresssion. The name has to be a
 valid random number generator, the expression has to be a list of named unquoted arguments.}
+
+\item{par}{a character vector of parameter names used in the specification of the factor matrix}
 }
 \value{
-A list of \link[rlang]{quosure}s
+A list of \link[rlang]{quosure}s to be used in \link[factorcopula]{fc_create} or \link[factorcopula]{fc_fit}
 }
 \description{
 Configurate the error part of a factorcopula model
