@@ -4,8 +4,29 @@
 \alias{fc_critval}
 \title{Simulate critival values for either the copula or the moments based break test}
 \usage{
-fc_critval(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NULL,
-  theta = NULL, cl = NULL)
+fc_critval(type = c("moments", "copula"), Y, B, tSeq, k, factor = NULL,
+  error = NULL, beta = NULL, theta = NULL, cl = NULL)
+}
+\arguments{
+\item{type}{either moments or copula}
+
+\item{Y}{a numeric matrix of observed values}
+
+\item{B}{the number of bootstrap replications}
+
+\item{tSeq}{a sequence with positive integers}
+
+\item{k}{a vector defining the groups of the variables}
+
+\item{factor}{specification of latent variables, see \link[factorcopula]{config_factor}}
+
+\item{error}{specification of error term, see \link[factorcopula]{config_error}}
+
+\item{beta}{specification of parameter matrix, see \link[factorcopula]{config_beta}}
+
+\item{theta}{named vector of full model parameter estimates}
+
+\item{cl}{an optional cluster object, see \link[snow]{makeCluster}}
 }
 \description{
 Simulate critival values for either the copula or the moments based break test

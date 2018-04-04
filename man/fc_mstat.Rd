@@ -4,7 +4,16 @@
 \alias{fc_mstat}
 \title{Calculate recursive test statistics for the moments based break test}
 \usage{
-fc_mstat(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL)
+fc_mstat(Y, tSeq, k, cl = NULL)
+}
+\arguments{
+\item{Y}{matrix of observed values}
+
+\item{tSeq}{A vector of positive integers}
+
+\item{k}{a vector defining the groups of the variables}
+
+\item{cl}{a cluster object, see \link[snow]{makeCluster}}
 }
 \description{
 Calculate recursive test statistics for the moments based break test

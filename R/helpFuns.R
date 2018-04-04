@@ -4,25 +4,39 @@ checkNamespace <- function(name){
   }
 }
 
-getStandResiduals <- function(x){
-  checkNamespace("rugarch")
-  spec = rugarch::ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)),
-                             mean.model=list(armaOrder=c(1,0), include.mean=TRUE),
-                             distribution.model="norm")
-  garch <- rugarch::ugarchfit(spec = spec, data = x)
-  res <- as.vector(rugarch::residuals(garch, standardize = TRUE))
-  return(res)
+parallelLapply <- function(x, fun, cl, load.balancing = TRUE, ...){
+  if(is.null(cl)){
+    lapply(x, fun, ...)
+  } else {
+    if (load.balancing){
+      snow::clusterApplyLB(cl, x, fun, ...)
+    } else {
+      snow::clusterApply(cl, x, fun, ...)
+    }
+  }
 }
 
-empDist <- function(x){
-  data.table::frank(x)/length(x)
-}
+# getStandResiduals <- function(x){
+#   checkNamespace("rugarch")
+#   spec = rugarch::ugarchspec(variance.model=list(model="gjrGARCH", garchOrder=c(1,1)),
+#                              mean.model=list(armaOrder=c(1,0), include.mean=TRUE),
+#                              distribution.model="norm")
+#   garch <- rugarch::ugarchfit(spec = spec, data = x)
+#   res <- as.vector(rugarch::residuals(garch, standardize = TRUE))
+#   return(res)
+# }
 
-rankCor <- function(u, v){
-  t <- length(u)
-  #12/t*sum(u*v) - 3
-  12*(t/(t^2-1))*sum(u*v)-3*(t+1)/(t-1)
-  #cor(u, v)
+#' Load packages on a cluster
+#'
+#' @param cl cluster object created by \link[snow]{makeCluster}
+#' @param packages list or vector of package names
+#'
+#' @return TRUE if all packages could be loaded on all cluster nodes
+#' @export
+cluster_library <- function(cl, packages){
+  snow::clusterExport(cl, "packages", envir = environment())
+  res <- snow::clusterEvalQ(cl, invisible(lapply(packages, library, character.only = TRUE, logical.return = TRUE)))
+  all(unlist(res))
 }
 
 #' Generate random numbers from the skewed t distribution
@@ -39,7 +53,7 @@ rst <- function(n, nu = 1e9, lambda = 0){
   # lambda: skewness parameter (-1, 1)
   stopifnot(nu >= 2 & lambda > -1 & lambda < 1)
 
-  u <- runif(n)
+  u <- stats::runif(n)
   if (is.infinite(suppressWarnings(gamma(nu/2)))){
     c <- 0
     a <- 0
@@ -52,8 +66,8 @@ rst <- function(n, nu = 1e9, lambda = 0){
 
   f1 <- u < (1-lambda)/2
 
-  inv1 <- (1-lambda)/b*sqrt((nu-2)/nu)*qt(u[f1]/(1-lambda), nu)-a/b
-  inv2 <- (1+lambda)/b*sqrt((nu-2)/nu)*qt(0.5+1/(1+lambda)*(u[!f1]-(1-lambda)/2), nu)-a/b
+  inv1 <- (1-lambda)/b*sqrt((nu-2)/nu)*stats::qt(u[f1]/(1-lambda), nu)-a/b
+  inv2 <- (1+lambda)/b*sqrt((nu-2)/nu)*stats::qt(0.5+1/(1+lambda)*(u[!f1]-(1-lambda)/2), nu)-a/b
 
   inv <- rep(0, n)
   inv[f1]  <- inv1
@@ -61,32 +75,9 @@ rst <- function(n, nu = 1e9, lambda = 0){
   return(inv)
 }
 
-quantDep <- function(u, v, qSeq){
-  t <- length(u)
-  vapply(qSeq, function(q){
-    if (q <= 0.5){
-      sum(u <= q & v <= q)/(t*q)
-    } else {
-      sum(u > q & v > q)/(t*(1-q))
-    }
-  }, numeric(1))
-}
 
-unitVector <- function(size, k){
-  vec <- rep(0, size)
-  vec[k] <- 1
-  return(vec)
-}
 
-genBetaParMat <- function(k){
-  kTab <- table(k)
-  M <- max(k)
-  first <- rep(paste0("beta", 1:M), times = kTab)
-  last <- lapply(1:M, function(m){
-    if (m == 1) timesLow <- 0 else timesLow <- sum(kTab[1:m-1])
-    if (m == M) timesUp <- 0 else timesUp <- sum(kTab[(m+1):M])
-    c(rep(0, timesLow), rep(paste0("beta", m+M), kTab[m]), rep(0, timesUp))
-  })
-  cbind(first, do.call(cbind, last))
-}
+
+
+
 

@@ -1,27 +1,19 @@
 Package: factorcopula
 Type: Package
 Title: High Dimensional Depence Modelling with Factor Copulas
-Version: 0.1
-Author@R: person("Malte", "Bonart", email = "bonartm@uni-koeln.de", role = c("aut", "cre"))
-Description: r package for high dimensional specification, simulation and estimation of factor copula models
+Version: 0.9
+Authors@R: person("Malte", "Bonart", email = "bonartm@uni-koeln.de", role = c("aut", "cre"))
+Description: r package for high dimensional specification, simulation and estimation of factor copula models.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Imports:
-  nloptr,
-  snow,
-  parallel,
-  data.table,
-  dplyr,
-  rlang
-Suggests:
-  sgt,
-  DEoptim,
-  rgenoud,
-  readr,
-  rugarch,
-    testthat
+  nloptr (>= 1.0.4),
+  snow (>= 0.4-2),
+  rlang (>= 0.2.0),
+  stats (>= 3.4.3),
+  utils (>= 3.4.3)
 Depends:
-  R (>= 3.3.3)
+  R (>= 3.4.3)
 LinkingTo: 
 RoxygenNote: 6.0.1

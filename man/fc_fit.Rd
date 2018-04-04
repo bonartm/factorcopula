@@ -4,31 +4,38 @@
 \alias{fc_fit}
 \title{Fit a factor copula model}
 \usage{
-fc_fit(Y, copFun, lower, upper, method = c("DEoptim", "genoud", "subplex",
-  "two-stage"), control, cluster = NULL, trials = NULL, S = NULL,
-  k = rep(1, ncol(Y)), seed = runif(1, 1, .Machine$integer.max))
+fc_fit(Y, factor, error, beta, lower, upper, recursive, control, S, k,
+  cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE)
 }
 \arguments{
 \item{Y}{A dataframe or matrix like object}
 
-\item{copFun}{A copula function estimated by @references factorCopula}
+\item{factor}{specification of latent variables, see \link[factorcopula]{config_factor}}
+
+\item{error}{specification of error term, see \link[factorcopula]{config_error}}
+
+\item{beta}{specification of parameter matrix, see \link[factorcopula]{config_beta}}
 
 \item{lower}{Lower bound for optimazation: Named vector with parameters}
 
 \item{upper}{Upper bound for optimazation: Named vector with parameters}
 
-\item{method}{"DEoptim", "genoud" or "subplex" (see Details)}
+\item{recursive}{Wether to estimate recursive or full model}
 
-\item{control}{named list of arguments passed to the optimizer}
+\item{control}{named list of arguments passed to the subplex algorithm, see \link[nloptr]{nl.opts}}
 
 \item{S}{The number of simulations to use}
 
 \item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
 
-\item{seed}{Fixed random number seed to use during optimazation}
+\item{cl}{A cluster object, see \link[snow]{makeCluster}}
+
+\item{trials}{number of model runs with different starting values}
+
+\item{load.balancing}{if TRUE a load balancing cluster apply is performed}
 }
 \value{
-a list of optimazation results
+if recursive a data.frame, else a vector of parameters and model statistics
 }
 \description{
 Fit a factor copula model

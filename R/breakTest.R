@@ -1,25 +1,33 @@
 #' Return the p statistics of a recursive factor copula model
 #'
-#' @param theta A matrix with max(tSeq) rows of recursive parameters
+#' @param theta A numeric matrix with max(tSeq) rows of recursive parameters
 #' @param tSeq A vector of positive integers
 #'
-#' @return for each entray in tSeq a P statistic
+#' @return a vector of P statistics for each t
 #' @export
 fc_pstat <- function(theta, tSeq){
   stopifnot(!is.null(dim(theta)))
+  theta <- as.matrix(theta)
   T <- max(tSeq)
-  diff <- apply(theta, 1, function(x) {
-    diff <- (x - theta[nrow(theta), ])
+  thetaFull <- theta[nrow(theta), ]
+
+  leftPart <- vapply(1:nrow(theta), function(i){
+    diff <- theta[i, ] - thetaFull
     t(diff)%*%diff
-  })
-  P <- (tSeq/T)^2*T*diff
+  }, numeric(1))
+
+  P <- (tSeq/T)^2*T*leftPart
   return(P)
 }
 
 #' Calculate recursive test statistics for the moments based break test
+#' @param Y matrix of observed values
+#' @param tSeq A vector of positive integers
+#' @param k a vector defining the groups of the variables
+#' @param cl a cluster object, see \link[snow]{makeCluster}
 #'
 #' @export
-fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL){
+fc_mstat <- function(Y, tSeq, k, cl = NULL){
   Ydis <- apply(Y, 2, empDist)
   mFull <- moments(Ydis, k)
   T <- nrow(Y)
@@ -32,9 +40,20 @@ fc_mstat <- function(Y, tSeq, k = rep(1, ncol(Y)), cl = NULL){
 
 
 #' Simulate critival values for either the copula or the moments based break test
+#' @param type either moments or copula
+#' @param Y a numeric matrix of observed values
+#' @param B the number of bootstrap replications
+#' @param tSeq a sequence with positive integers
+#' @param k a vector defining the groups of the variables
+#' @param factor specification of latent variables, see \link[factorcopula]{config_factor}
+#' @param error specification of error term, see \link[factorcopula]{config_error}
+#' @param beta specification of parameter matrix, see \link[factorcopula]{config_beta}
+#' @param theta named vector of full model parameter estimates
+#' @param cl an optional cluster object, see \link[snow]{makeCluster}
 #'
 #' @export
-fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NULL, theta = NULL, cl = NULL){
+fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k,
+                       factor = NULL, error = NULL, beta = NULL, theta = NULL, cl = NULL){
   #resY: matrix of standardized residuals from empirical data Y
   #B: number of bootstrap samples
   #moments: function which generates a vector of dependence measures
@@ -44,7 +63,10 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NU
   T <- nrow(Y)
 
   if (type %in% c("both", "copula")){
-    seed <- runif(1, min = 1, max = .Machine$integer.max)
+    stopifnot(!is.null(config_factor) & !is.null(config_error) & !is.null(config_beta))
+    copFun <- fc_create(config_factor, config_error, config_beta)
+    theta <- unlist(c(theta))
+    seed <- random_seed()
     G <- getGHat(theta, copFun, 0.1, mHat, k, S = 25000, seed)
     W <- diag(length(mHat))
     leftPart <- solve(t(G)%*%W%*%G)%*%t(G)%*%W
@@ -71,8 +93,44 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k, copFun = NU
     }, numeric(1))
 
     return(max(Kbt))
-  }, cl = cl, T = T, tSeq = tSeq, Ydis = Ydis, k = k, leftPart = leftPart, type = type)
+  }, cl = cl, T = T, tSeq = tSeq, Ydis = Ydis, k = k, leftPart = leftPart, type = type, load.balancing = FALSE)
   return(unlist(Kb))
+}
+
+getGHat <- function(theta, copFun, eps, mHat, k, S, seed){
+  P <- length(theta)
+  M <- length(mHat)
+
+  Gcol <- lapply(1:P, function(j){
+    step <- unitVector(P, j)*eps
+    ghatplus <- optim_g(mHat, copFun, theta + step, S, seed, k)
+    ghatminus <- optim_g(mHat, copFun, theta - step, S, seed, k)
+    (ghatplus-ghatminus)/(2*eps)
+  })
+  G <- do.call(cbind, Gcol)
+  stopifnot(nrow(G) == M & ncol(G) == P)
+  return(G)
+}
+
+getSigmaHat <- function(Y, B, k){
+  T <- nrow(Y)
+  Ydis <- apply(Y, 2, empDist)
+  sigmaB <- replicate(B, {
+    b <- sample(1:T, T, replace = TRUE)
+    mHatB <- moments(Ydis[b, ], k)
+  })
+  T*stats::cov(t(sigmaB))
+}
+
+getOmegaHat <- function(G, W, sigma){
+  inv <- solve(t(G)%*%W%*%G)
+  inv%*%t(G)%*%W%*%sigma%*%W%*%G%*%inv
+}
+
+unitVector <- function(size, k){
+  vec <- rep(0, size)
+  vec[k] <- 1
+  return(vec)
 }
 
 

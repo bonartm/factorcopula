@@ -7,12 +7,12 @@
 fc_pstat(theta, tSeq)
 }
 \arguments{
-\item{theta}{A matrix with max(tSeq) rows of recursive parameters}
+\item{theta}{A numeric matrix with max(tSeq) rows of recursive parameters}
 
 \item{tSeq}{A vector of positive integers}
 }
 \value{
-for each entray in tSeq a P statistic
+a vector of P statistics for each t
 }
 \description{
 Return the p statistics of a recursive factor copula model
