@@ -13,7 +13,30 @@
 #' @param cl A cluster object, see \link[snow]{makeCluster}
 #' @param trials number of model runs with different starting values
 #' @param load.balancing if TRUE a load balancing cluster apply is performed
-#' @return if recursive a data.frame, else a vector of parameters and model statistics
+#' @return if recursive a data.frame, else a vector of parameters and model statistics.
+#'
+#' @section Convergence info:
+#'
+#' \emph{taken from: \url{http://nlopt.readthedocs.io/en/latest/NLopt_Reference/#Return_values.md}.}
+#'
+#' Postive integers:
+#' \itemize{
+#' \item 1 - Generic success return value.
+#' \item 2 - Optimization stopped because stopval (above) was reached.
+#' \item 3 - Optimization stopped because ftol_rel or ftol_abs (above) was reached.
+#' \item 4 - Optimization stopped because xtol_rel or xtol_abs (above) was reached.
+#' \item 5 - Optimization stopped because maxeval (above) was reached.
+#' \item 6 - Optimization stopped because maxtime (above) was reached.
+#' }
+#' Negative integers:
+#' \itemize{
+#' \item -1 - Generic failure code.
+#' \item -2 - Invalid arguments (e.g. lower bounds are bigger than upper bounds, an unknown algorithm was specified, etcetera).
+#' \item -3 - Ran out of memory.
+#' \item -4 - Halted because roundoff errors limited progress. (In this case, the optimization still typically returns a useful result.)
+#' \item-5 - Halted because of a forced termination
+#' }
+#'
 #' @export
 fc_fit <- function(Y, factor, error, beta, lower, upper, recursive, control, S, k,
                    cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE) {
