@@ -1,6 +1,6 @@
 #' Return the p statistics of a recursive factor copula model
 #'
-#' @param theta A numeric matrix with max(tSeq) rows of recursive parameters
+#' @param theta A numeric matrix with length(tSeq) rows of recursive parameters
 #' @param tSeq A vector of positive integers
 #'
 #' @return a vector of P statistics for each t

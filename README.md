@@ -21,6 +21,7 @@ devtools::install_github("bonartm/factorcopula")
 ## usage
 ```R
 library(factorcopula)
+help(package = "factorcopula")
 
 # define a one factor skew-t copula
 t <- 1500
@@ -53,4 +54,5 @@ parallel::stopCluster(cl)
 
 plot(Y, pch = 20)
 points(qnorm(cop(m[1:2], 2000)), col = "red", pch = 20)
+
 ````

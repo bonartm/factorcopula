@@ -9,7 +9,7 @@ rst(n, nu = 1e+09, lambda = 0)
 \arguments{
 \item{n}{number of observations}
 
-\item{nu}{degree of freedoms}
+\item{nu}{degree of freedoms, must be > 2}
 
 \item{lambda}{skewness factor between (-1:1)}
 }

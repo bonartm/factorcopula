@@ -42,15 +42,12 @@ cluster_library <- function(cl, packages){
 #' Generate random numbers from the skewed t distribution
 #'
 #' @param n number of observations
-#' @param nu degree of freedoms
+#' @param nu degree of freedoms, must be > 2
 #' @param lambda skewness factor between (-1:1)
 #'
 #' @return a vactor of length n
 #' @export
 rst <- function(n, nu = 1e9, lambda = 0){
-  # Generates random numbers from the skewed t distribution by Hansen (1994)
-  # nuInv: Inverse nu parameter (degrees of freedom, q) (0, )
-  # lambda: skewness parameter (-1, 1)
   stopifnot(nu >= 2 & lambda > -1 & lambda < 1)
 
   u <- stats::runif(n)
