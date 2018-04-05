@@ -14,6 +14,6 @@ Imports:
   stats (>= 3.4.3),
   utils (>= 3.4.3)
 Depends:
-  R (>= 3.4.3)
+  R (>= 3.3.3)
 LinkingTo: 
 RoxygenNote: 6.0.1
