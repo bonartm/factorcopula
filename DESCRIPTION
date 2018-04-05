@@ -11,8 +11,8 @@ Imports:
   nloptr (>= 1.0.4),
   snow (>= 0.4-2),
   rlang (>= 0.2.0),
-  stats (>= 3.4.3),
-  utils (>= 3.4.3)
+  stats,
+  utils
 Depends:
   R (>= 3.3.3)
 LinkingTo: 
