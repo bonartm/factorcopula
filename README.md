@@ -7,8 +7,9 @@
 - [x] (parallel) estimation of high dimensional dependence structures using the [simulated methods of moments](https://pdfs.semanticscholar.org/cc9f/124d25111430f4f2e977869daef6f403e24a.pdf)
 - [x] unrestricted, equi-dependence and block-equi-dependence model specification
 - [x] implementation of a [structural break test](http://www.wisostat.uni-koeln.de/sites/statistik/abstracts/Manner_Stark_Wied_2017.pdf)
-- [ ] estimation of asymptotic variance and implementation of the J test for overidentifying restrictions
-- [ ]  implement faster C++ code with Rcpp
+- [x] estimation of asymptotic variance and confidence intervalls
+- [ ] implementation of the J test for overidentifying restrictions
+- [ ] implementation of faster C++ code with Rcpp
 
 
 

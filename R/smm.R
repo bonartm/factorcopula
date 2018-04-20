@@ -68,8 +68,8 @@ fc_fit <- function(Y, factor, error, beta, lower, upper, control, S, k, se = FAL
   models <- parallelLapply(x = 1:trials, fun = function(trial){
       model_estimate(stats::runif(length(lower), lower, upper), mHat)
   }, cl = cl, load.balancing = load.balancing)
-  best <- model_best(models)
-  all <- model_theta(models)
+  best <- model_best(models, names(lower))
+  all <- model_theta(models, names(lower))
 
   res <- list(models = all, best = best)
 
@@ -78,27 +78,33 @@ fc_fit <- function(Y, factor, error, beta, lower, upper, control, S, k, se = FAL
     sigma <- getSigmaHat(Yres, 1000, k)
     copFun <- fc_create(factor, error, beta)
     seed <- random_seed()
-    G <- getGHat(best$par, copFun, 0.1, mHat, k, S, seed)
+    thetaFull <- best[1:length(lower)]
+
+    G <- getGHat(thetaFull, copFun, 0.1, mHat, k, S, seed)
+
     omega <- getOmegaHat(G, W, sigma)
-    se <- sqrt(omega/(1/T + 1/S))
-    lower <- best$par - qnorm(1-0.05/2) * se
-    upper <- best$par + qnorm(1-0.05/2) * se
+    se <- sqrt(omega*(1/T + 1/S))
+    lowerCI <- thetaFull - qnorm(1-0.05/2) * se
+    upperCI <- thetaFull + qnorm(1-0.05/2) * se
     res$omega = omega
     res$se = se
-    res$ci = data.frame(par = res$best, lower = res$lower, upper = res$upper)
+    res$ci = data.frame(par = thetaFull, lower = lowerCI, upper = upperCI)
   }
 
   return(res)
 }
 
 
-model_theta <- function(models){
-  data.frame(do.call(rbind, lapply(models, function(x) c(x$par, x$value, x$convergence))))
+model_theta <- function(models, namesTheta){
+  res <- data.frame(do.call(rbind, lapply(models, function(x) c(x$par, x$value, x$convergence))))
+  names(res) <- c(namesTheta, "Q", "convergence")
+  res
 }
 
-model_best <- function(models){
+model_best <- function(models, namesTheta){
   Qval <- vapply(models, function(x) x$value, numeric(1))
-  models[[which.min(Qval)]]
+  best <- models[which.min(Qval)]
+  unlist(model_theta(best, namesTheta))
 }
 
 random_seed <- function(){
