@@ -83,7 +83,7 @@ fc_fit <- function(Y, factor, error, beta, lower, upper, control, S, k, se = FAL
     G <- getGHat(thetaFull, copFun, 0.1, mHat, k, S, seed)
 
     omega <- getOmegaHat(G, W, sigma)
-    se <- sqrt(omega*(1/T + 1/S))
+    se <- sqrt(diag(omega)*(1/T + 1/S))
     lowerCI <- thetaFull - qnorm(1-0.05/2) * se
     upperCI <- thetaFull + qnorm(1-0.05/2) * se
     res$omega = omega
