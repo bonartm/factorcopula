@@ -10,6 +10,7 @@
 #' @param S The number of simulations to use
 #' @param k A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)
 #' @param se Wether to estimate standard errors and confidence intervalls
+#' @param B number of bootstrap replication for estimating standard error
 #' @param cl A cluster object, see \link[snow]{makeCluster}
 #' @param trials number of model runs with different starting values
 #' @param load.balancing if TRUE a load balancing cluster apply is performed
@@ -38,7 +39,7 @@
 #' }
 #'
 #' @export
-fc_fit <- function(Y, factor, error, beta, lower, upper, control, S, k, se = FALSE,
+fc_fit <- function(Y, factor, error, beta, lower, upper, control, S, k, se = FALSE, B = 1000,
                    cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE) {
 
   opti <- function(theta, mHat, copFun, seed){
@@ -75,7 +76,7 @@ fc_fit <- function(Y, factor, error, beta, lower, upper, control, S, k, se = FAL
 
   if (se){
     cat("Estimating standard errors using the best model.\n")
-    sigma <- getSigmaHat(Yres, 1000, k)
+    sigma <- getSigmaHat(Yres, B, k)
     copFun <- fc_create(factor, error, beta)
     seed <- random_seed()
     thetaFull <- best[1:length(lower)]
@@ -86,9 +87,11 @@ fc_fit <- function(Y, factor, error, beta, lower, upper, control, S, k, se = FAL
     se <- sqrt(diag(omega)*(1/T + 1/S))
     lowerCI <- thetaFull - qnorm(1-0.05/2) * se
     upperCI <- thetaFull + qnorm(1-0.05/2) * se
+    Tval <- (thetaFull-0)/se
+    pVal <- 2*(pnorm(-abs(Tval)))
     res$omega = omega
     res$se = se
-    res$ci = data.frame(par = thetaFull, lower = lowerCI, upper = upperCI)
+    res$ci = data.frame(par = thetaFull, lower = lowerCI, upper = upperCI, p = pVal)
   }
 
   return(res)

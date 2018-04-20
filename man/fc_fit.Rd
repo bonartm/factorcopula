@@ -5,7 +5,8 @@
 \title{Fit a factor copula model}
 \usage{
 fc_fit(Y, factor, error, beta, lower, upper, control, S, k, se = FALSE,
-  cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE)
+  B = 1000, cl = NULL, trials = max(1, length(cl)),
+  load.balancing = TRUE)
 }
 \arguments{
 \item{Y}{A dataframe or matrix like object}
@@ -27,6 +28,8 @@ fc_fit(Y, factor, error, beta, lower, upper, control, S, k, se = FALSE,
 \item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
 
 \item{se}{Wether to estimate standard errors and confidence intervalls}
+
+\item{B}{number of bootstrap replication for estimating standard error}
 
 \item{cl}{A cluster object, see \link[snow]{makeCluster}}
 
