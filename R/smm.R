@@ -6,10 +6,10 @@
 #' @param beta specification of parameter matrix, see \link[factorcopula]{config_beta}
 #' @param lower Lower bound for optimazation: Named vector with parameters
 #' @param upper Upper bound for optimazation: Named vector with parameters
-#' @param recursive Wether to estimate recursive or full model
 #' @param control named list of arguments passed to the subplex algorithm, see \link[nloptr]{nl.opts}
 #' @param S The number of simulations to use
 #' @param k A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)
+#' @param se Wether to estimate standard errors and confidence intervalls
 #' @param cl A cluster object, see \link[snow]{makeCluster}
 #' @param trials number of model runs with different starting values
 #' @param load.balancing if TRUE a load balancing cluster apply is performed
@@ -38,8 +38,14 @@
 #' }
 #'
 #' @export
-fc_fit <- function(Y, factor, error, beta, lower, upper, recursive, control, S, k,
+fc_fit <- function(Y, factor, error, beta, lower, upper, control, S, k, se = FALSE,
                    cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE) {
+
+  opti <- function(theta, mHat, copFun, seed){
+    names(theta) <- names(lower)
+    gVal <-optim_g(mHat, copFun, theta, S, seed, k)
+    as.vector(optim_q(gVal, W))
+  }
 
   model_estimate <- function(theta, mHat){
     seed <- random_seed()
@@ -50,71 +56,39 @@ fc_fit <- function(Y, factor, error, beta, lower, upper, recursive, control, S, 
 
   Yres <- apply(Y, 2, empDist)
   mHat <- moments(Yres, k)
-
   T <- nrow(Yres)
-
   N <- ncol(Yres)
   W <- diag(length(mHat))
-
-  opti <- function(theta, mHat, copFun, seed){
-    names(theta) <- names(lower)
-    gVal <-optim_g(mHat, copFun, theta, S, seed, k)
-    as.vector(optim_q(gVal, W))
-  }
 
   if(!is.null(cl)){
     snow::clusterExport(cl, ls(envir = environment()), environment())
   }
 
-  if (recursive){
-    if (T <= 300){
-      stop("Number of observations is to small.")
-    }
-    tSeq <- 300:T
-    ## estimate some starting values by slicing the input into chunks of 500 observations
-    t_start <- slice(1:nrow(Y), 500)
-    cat("Recursive model estimation with", length(t_start), "starting value(s) and", length(tSeq), "time periods\n")
-
-    theta_start <- lapply(t_start, function(tValues){
-      if(!is.null(cl)){
-        snow::clusterExport(cl, "t", environment())
-
-      }
-      start <- parallelLapply(x = 1:length(cl), fun = function(trial){
-        mHat <- moments(Yres[tValues, ], k)
-        theta <- stats::runif(length(lower), lower, upper)
-        model_estimate(theta = theta, mHat = mHat)
-      }, cl = cl, load.balancing = load.balancing)
-      start <- model_best(start)
-      cat("Estimated starting value(s) from t =", min(tValues), "to t =", max(tValues), ":", round(start$par,4), "- Q:",round(start$value,4), "\n")
-      start$par
-    })
-
-    if(!is.null(cl)){
-      snow::clusterExport(cl, c("theta_start"), environment())
-    }
-
-    result <- parallelLapply(x = tSeq, fun = function(t){
-      models <- lapply(theta_start, model_estimate,
-                       mHat = moments(Yres[1:t, ], k))
-      model_best(models)
-    }, cl = cl, load.balancing = load.balancing)
-
-    theta <- model_theta(result)
-    theta$t <- tSeq
-
-  } else {
-
-    cat("Full model estimation with",trials, "trial(s)\n")
-    full <- parallelLapply(x = 1:trials, fun = function(trial){
+  cat("Full model estimation with",trials, "trial(s).\n")
+  models <- parallelLapply(x = 1:trials, fun = function(trial){
       model_estimate(stats::runif(length(lower), lower, upper), mHat)
-    }, cl = cl, load.balancing = load.balancing)
-    best <- model_best(full)
-    theta <- c(best$par, best$value, best$convergence, T)
+  }, cl = cl, load.balancing = load.balancing)
+  best <- model_best(models)
+  all <- model_theta(models)
+
+  res <- list(models = all, best = best)
+
+  if (se){
+    cat("Estimating standard errors using the best model.\n")
+    sigma <- getSigmaHat(Yres, 1000, k)
+    copFun <- fc_create(factor, error, beta)
+    seed <- random_seed()
+    G <- getGHat(best$par, copFun, 0.1, mHat, k, S, seed)
+    omega <- getOmegaHat(G, W, sigma)
+    se <- sqrt(omega/(1/T + 1/S))
+    lower <- best$par - qnorm(1-0.05/2) * se
+    upper <- best$par + qnorm(1-0.05/2) * se
+    res$omega = omega
+    res$se = se
+    res$ci = data.frame(par = res$best, lower = res$lower, upper = res$upper)
   }
 
-  names(theta) <- c(names(lower), "Q", "convergence", "t")
-  return(round(theta, 4))
+  return(res)
 }
 
 
@@ -132,8 +106,6 @@ random_seed <- function(){
   stats::runif(1, -max, max)
 }
 
-slice <- function(x, n) split(x, as.integer((seq_along(x) - 1) / n))
-
 optim_q <- function(gVal, W){
   t(gVal)%*%W%*%gVal
 }
@@ -142,6 +114,20 @@ optim_g <- function(mHat, copFun, theta, S, seed, k){
   U <- copFun(theta, S, seed)
   mTilde <- moments(U, k)
   return(mHat - mTilde)
+}
+
+getSigmaHat <- function(Ydis, B, k){
+  T <- nrow(Ydis)
+  sigmaB <- replicate(B, {
+    b <- sample(1:T, T, replace = TRUE)
+    mHatB <- moments(Ydis[b, ], k)
+  })
+  T*stats::cov(t(sigmaB))
+}
+
+getOmegaHat <- function(G, W, sigma){
+  inv <- solve(t(G)%*%W%*%G)
+  inv%*%t(G)%*%W%*%sigma%*%W%*%G%*%inv
 }
 
 

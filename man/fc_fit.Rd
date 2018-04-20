@@ -4,7 +4,7 @@
 \alias{fc_fit}
 \title{Fit a factor copula model}
 \usage{
-fc_fit(Y, factor, error, beta, lower, upper, recursive, control, S, k,
+fc_fit(Y, factor, error, beta, lower, upper, control, S, k, se = FALSE,
   cl = NULL, trials = max(1, length(cl)), load.balancing = TRUE)
 }
 \arguments{
@@ -20,13 +20,13 @@ fc_fit(Y, factor, error, beta, lower, upper, recursive, control, S, k,
 
 \item{upper}{Upper bound for optimazation: Named vector with parameters}
 
-\item{recursive}{Wether to estimate recursive or full model}
-
 \item{control}{named list of arguments passed to the subplex algorithm, see \link[nloptr]{nl.opts}}
 
 \item{S}{The number of simulations to use}
 
 \item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
+
+\item{se}{Wether to estimate standard errors and confidence intervalls}
 
 \item{cl}{A cluster object, see \link[snow]{makeCluster}}
 

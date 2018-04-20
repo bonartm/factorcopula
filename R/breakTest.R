@@ -112,21 +112,6 @@ getGHat <- function(theta, copFun, eps, mHat, k, S, seed){
   return(G)
 }
 
-getSigmaHat <- function(Y, B, k){
-  T <- nrow(Y)
-  Ydis <- apply(Y, 2, empDist)
-  sigmaB <- replicate(B, {
-    b <- sample(1:T, T, replace = TRUE)
-    mHatB <- moments(Ydis[b, ], k)
-  })
-  T*stats::cov(t(sigmaB))
-}
-
-getOmegaHat <- function(G, W, sigma){
-  inv <- solve(t(G)%*%W%*%G)
-  inv%*%t(G)%*%W%*%sigma%*%W%*%G%*%inv
-}
-
 unitVector <- function(size, k){
   vec <- rep(0, size)
   vec[k] <- 1
