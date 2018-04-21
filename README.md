@@ -47,13 +47,15 @@ lower <- c(beta1 = 0, lambda = -0.99)
 upper <- c(beta1 = 5, lambda =  0.99)
 
 
-# fit the copula and plot observed and simulated values
+# fit the copula 
 cl <- parallel::makeCluster(parallel::detectCores())
-m <- fc_fit(Y, Z, eps, beta, lower, upper, 
-recursive = FALSE, control = list(stopval = 0, xtol_rel = 1e-9, maxeval = 3000), k = k, S = 25000, trials = 4, cl = cl)
+m <- fc_fit(Y, Z, eps, beta, lower, upper, se = TRUE, control = list(stopval = 0, xtol_rel = 1e-9, maxeval = 3000), k = k, S = 20*t, trials = 4, cl = cl)
 parallel::stopCluster(cl)
 
+# plot observed and simulated values
 plot(Y, pch = 20)
-points(qnorm(cop(m[1:2], 2000)), col = "red", pch = 20)
+points(qnorm(cop(m$best[1:2], 2000)), col = "red", pch = 20)
 
+# confidence intervalls and p-values
+m$ci
 ````
