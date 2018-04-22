@@ -96,7 +96,6 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k,
   }, cl = cl, T = T, tSeq = tSeq, Ydis = Ydis, k = k, leftPart = leftPart, type = type, load.balancing = FALSE)
   return(unlist(Kb))
 }
-
 getGHat <- function(theta, copFun, eps, mHat, k, S, seed){
   P <- length(theta)
   M <- length(mHat)

@@ -4,7 +4,7 @@
 
 ## features
 - [x] simulation from user specified [factor copula models](http://www.tandfonline.com/doi/full/10.1080/07350015.2015.1062384) (e.g. factors and error terms from the skew t, normal, t distribution)
-- [x] (parallel) estimation of high dimensional dependence structures using the [simulated methods of moments](https://pdfs.semanticscholar.org/cc9f/124d25111430f4f2e977869daef6f403e24a.pdf)
+- [x] estimation of high dimensional dependence structures using the [simulated methods of moments](https://pdfs.semanticscholar.org/cc9f/124d25111430f4f2e977869daef6f403e24a.pdf)
 - [x] unrestricted, equi-dependence and block-equi-dependence model specification
 - [x] implementation of a [structural break test](http://www.wisostat.uni-koeln.de/sites/statistik/abstracts/Manner_Stark_Wied_2017.pdf)
 - [x] estimation of asymptotic variance and confidence intervalls
@@ -48,14 +48,18 @@ upper <- c(beta1 = 5, lambda =  0.99)
 
 
 # fit the copula 
-cl <- parallel::makeCluster(parallel::detectCores())
-m <- fc_fit(Y, Z, eps, beta, lower, upper, se = TRUE, control = list(stopval = 0, xtol_rel = 1e-9, maxeval = 3000), k = k, S = 20*t, trials = 4, cl = cl)
-parallel::stopCluster(cl)
+
+
+m <- fc_fit(Y, Z, eps, beta, lower, upper, S = 20000, se = TRUE)
+m$solution
+m$objective
+m$message
+
 
 # plot observed and simulated values
 plot(Y, pch = 20)
-points(qnorm(cop(m$best[1:2], 2000)), col = "red", pch = 20)
+points(qnorm(cop(m$solution, 2000)), col = "red", pch = 20)
 
 # confidence intervalls and p-values
-m$ci
+round(m$ci, 4)
 ````

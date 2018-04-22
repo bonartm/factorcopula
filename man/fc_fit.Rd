@@ -4,9 +4,11 @@
 \alias{fc_fit}
 \title{Fit a factor copula model}
 \usage{
-fc_fit(Y, factor, error, beta, lower, upper, control, S, k, se = FALSE,
-  B = 1000, cl = NULL, trials = max(1, length(cl)),
-  load.balancing = TRUE)
+fc_fit(Y, factor, error, beta, lower, upper, k = rep(1, ncol(Y)), S = 25 *
+  nrow(Y), se = FALSE, B = 1000, control.first.stage = list(algorithm =
+  "NLOPT_GN_DIRECT_L", stopval = 0, xtol_rel = 1e-04, maxeval = 200),
+  control.second.stage = list(algorithm = "NLOPT_LN_SBPLX", stopval = 0,
+  xtol_rel = 1e-16, maxeval = 10000))
 }
 \arguments{
 \item{Y}{A dataframe or matrix like object}
@@ -21,49 +23,21 @@ fc_fit(Y, factor, error, beta, lower, upper, control, S, k, se = FALSE,
 
 \item{upper}{Upper bound for optimazation: Named vector with parameters}
 
-\item{control}{named list of arguments passed to the subplex algorithm, see \link[nloptr]{nl.opts}}
+\item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
 
 \item{S}{The number of simulations to use}
-
-\item{k}{A vector with length ncol(Y) defining the groups (e.q. equi-dependence or block-euqidependence model)}
 
 \item{se}{Wether to estimate standard errors and confidence intervalls}
 
 \item{B}{number of bootstrap replication for estimating standard error}
 
-\item{cl}{A cluster object, see \link[snow]{makeCluster}}
+\item{control.first.stage}{named list of options passed to the nloptr method. A full description of all options is shown by the function \code{nloptr::nloptr.print.options()}.}
 
-\item{trials}{number of model runs with different starting values}
-
-\item{load.balancing}{if TRUE a load balancing cluster apply is performed}
+\item{control.second.stage}{named list of options passed to the nloptr method. A full description of all options is shown by the function \code{nloptr::nloptr.print.options()}.}
 }
 \value{
-if recursive a data.frame, else a vector of parameters and model statistics.
+a list of optimization results
 }
 \description{
 Fit a factor copula model
 }
-\section{Convergence info}{
-
-
-\emph{taken from: \url{http://nlopt.readthedocs.io/en/latest/NLopt_Reference/#Return_values.md}.}
-
-Postive integers:
-\itemize{
-\item 1 - Generic success return value.
-\item 2 - Optimization stopped because stopval (above) was reached.
-\item 3 - Optimization stopped because ftol_rel or ftol_abs (above) was reached.
-\item 4 - Optimization stopped because xtol_rel or xtol_abs (above) was reached.
-\item 5 - Optimization stopped because maxeval (above) was reached.
-\item 6 - Optimization stopped because maxtime (above) was reached.
-}
-Negative integers:
-\itemize{
-\item -1 - Generic failure code.
-\item -2 - Invalid arguments (e.g. lower bounds are bigger than upper bounds, an unknown algorithm was specified, etcetera).
-\item -3 - Ran out of memory.
-\item -4 - Halted because roundoff errors limited progress. (In this case, the optimization still typically returns a useful result.)
-\item-5 - Halted because of a forced termination
-}
-}
-
