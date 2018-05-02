@@ -46,13 +46,20 @@ fc_fit <- function(Y, factor, error, beta, lower, upper, k = rep(1, ncol(Y)), S 
   names(model$solution) <- names(lower)
   cat("First stage solution:", model$solution, "\n")
 
+  ret <- list(theta.first.stage = model$solution)
+
 
   if (!is.null(control.second.stage$algorithm)){
     cat("Second stage model estimation with", control.second.stage$algorithm, "algorithm.\n")
     model <- model_estimate(model$solution, mHat, control.second.stage)
     names(model$solution) <- names(lower)
     cat("Second stage solution:", model$solution, "\n")
+    ret$theta.second.stage <- model$solution
   }
+
+  ret$Q <- model$objective
+  ret$message <- model$message
+  ret$iterations <- model$iterations
 
 
   if (se){
@@ -70,11 +77,11 @@ fc_fit <- function(Y, factor, error, beta, lower, upper, k = rep(1, ncol(Y)), S 
     upperCI <- thetaFull + stats::qnorm(1-0.05/2) * se
     Tval <- (thetaFull-0)/se
     pVal <- 2*(stats::pnorm(-abs(Tval)))
-    model$se = se
-    model$ci = data.frame(par = thetaFull, lower = lowerCI, upper = upperCI, p = pVal)
+    ret$se = se
+    ret$ci = data.frame(par = thetaFull, lower = lowerCI, upper = upperCI, p = pVal)
   }
 
-  return(model)
+  return(ret)
 }
 
 model_best <- function(models){
