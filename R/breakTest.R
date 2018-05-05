@@ -63,8 +63,8 @@ fc_critval <- function(type = c("moments", "copula"), Y, B, tSeq, k,
   T <- nrow(Y)
 
   if (type %in% c("both", "copula")){
-    stopifnot(!is.null(config_factor) & !is.null(config_error) & !is.null(config_beta))
-    copFun <- fc_create(config_factor, config_error, config_beta)
+    stopifnot(!is.null(factor) & !is.null(error) & !is.null(beta))
+    copFun <- fc_create(factor, error, beta)
     theta <- unlist(c(theta))
     seed <- random_seed()
     G <- getGHat(theta, copFun, 0.1, mHat, k, S = 25000, seed)
