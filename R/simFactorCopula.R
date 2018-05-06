@@ -104,7 +104,7 @@ state_changed <- function(state, theta, S, parnames, seed){
   if (is.null(seed)|(is.null(state$seed) & !is.null(seed)))
     res <- TRUE
   else {
-    res <- any(seed != state$seed, state$S != S, length(parnames) != 0 && state$theta[parnames] != theta[parnames])
+    res <- any(seed != state$seed, state$S != S, length(parnames) != 0 && any(state$theta[parnames] != theta[parnames]))
   }
   return(res)
 }
