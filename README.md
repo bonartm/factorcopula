@@ -43,23 +43,23 @@ U <- cop(theta0, t)
 Y <- qnorm(U)
 
 # define boundaries for optimzation
-lower <- c(beta1 = 0, lambda = -0.99)
-upper <- c(beta1 = 5, lambda =  0.99)
+lower <- c(beta1 = 0, lambda = -0.9)
+upper <- c(beta1 = 5, lambda =  0.9)
 
 
 # fit the copula 
 
 
 m <- fc_fit(Y, Z, eps, beta, lower, upper, S = 20000, se = TRUE)
-m$solution
-m$objective
+m$theta.second.stage
+m$Q
 m$message
-
 
 # plot observed and simulated values
 plot(Y, pch = 20)
-points(qnorm(cop(m$solution, 2000)), col = "red", pch = 20)
+points(qnorm(cop(m$theta.second.stage, 2000)), col = "red", pch = 20)
 
 # confidence intervalls and p-values
 round(m$ci, 4)
+
 ````
