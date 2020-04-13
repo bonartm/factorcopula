@@ -2,6 +2,8 @@
 
 [![Travis-CI Build Status](https://travis-ci.org/bonartm/factorcopula.svg?branch=master)](https://travis-ci.org/bonartm/factorcopula)
 
+This project is archived and no longer actively maintained.
+
 ## features
 - [x] simulation from user specified [factor copula models](http://www.tandfonline.com/doi/full/10.1080/07350015.2015.1062384) (e.g. factors and error terms from the skew t, normal, t distribution)
 - [x] estimation of high dimensional dependence structures using the [simulated methods of moments](https://pdfs.semanticscholar.org/cc9f/124d25111430f4f2e977869daef6f403e24a.pdf)
@@ -10,6 +12,28 @@
 - [x] estimation of asymptotic variance and confidence intervalls
 - [ ] implementation of the J test for overidentifying restrictions
 - [ ] implementation of faster C++ code with Rcpp
+
+## citation information
+
+Please cite the following paper when using any parts of this library in your research:
+
+```latex
+@phdthesis{bonart_malte_2020_3749627,
+  author       = {Bonart, Malte},
+  title        = {{Testing for Structural Breaks in Factor Copula 
+                   Models - Implementation and Application in Social
+                   Media Topic Analysis}},
+  school       = {University of Cologne},
+  year         = 2020,
+  month        = apr,
+  note         = {{Submitted for the Master Examination in Economics 
+                   at the Faculty of Management, Economics and Social
+                   Sciences of the University of Cologne in June
+                   2018.}},
+  doi          = {10.5281/zenodo.3749627},
+  url          = {https://doi.org/10.5281/zenodo.3749627}
+}
+```
 
 
 
